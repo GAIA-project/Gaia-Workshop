@@ -104,6 +104,7 @@ new_text = ""
 
 
 def maximum(v, sensor, unit):
+    global new_text
     max_value = max(v[0], v[1], v[2])
     print max_value, v
     print(gaia_text.max_message % (sensor, max_value, unit))
@@ -119,7 +120,7 @@ def maximum(v, sensor, unit):
 
 
 def minimum(v, sensor, unit):
-    global pin1, pin2
+    global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
     print min_value, v
     print(gaia_text.min_message % (sensor, min_value, unit))
@@ -185,7 +186,7 @@ closeAllLeds()
 
 
 def loop():
-    global mode, set
+    global mode, set, new_text
     value = grovepi.analogRead(Interruptor)
     if value < 500:
         if mode == 1:
@@ -237,7 +238,7 @@ def loop():
                 closeAllLeds()
                 print(luminosity)
                 for i in [0, 1, 2]:
-                    new_text = ("Light:" + str(luminosity[i]))
+                    setText("Light:" + str(luminosity[i]))
                     setRGB(R[i], G[i], B[i])
                     showLuminosity(luminosity[i], pin1[i], pin2[i])
                     time.sleep(2)
@@ -254,7 +255,7 @@ def loop():
                 closeAllLeds()
                 print(humidity)
                 for i in [0, 1, 2]:
-                    new_text = ("Humid:" + str(humidity[i]) + " %RH")
+                    setText("Humid:" + str(humidity[i]) + " %RH")
                     setRGB(R[i], G[i], B[i])
                     showHumidity(humidity[i], pin1[i], pin2[i])
                     time.sleep(2)
@@ -270,7 +271,7 @@ def loop():
                 closeAllLeds()
                 print(temperature)
                 for i in [0, 1, 2]:
-                    new_text = ("Temp:" + str(temperature[i]) + " Cdeg")
+                    setText("Temp:" + str(temperature[i]) + " Cdeg")
                     setRGB(R[i], G[i], B[i])
                     showTemperature(temperature[i], pin1[i], pin2[i])
                     time.sleep(2)
@@ -286,7 +287,7 @@ def loop():
                 closeAllLeds()
                 print(noise)
                 for i in [0, 1, 2]:
-                    new_text = ("Noise:" + str(noise[i]) + " dB")
+                    setText("Noise:" + str(noise[i]) + " dB")
                     setRGB(R[i], G[i], B[i])
                     showNoise(noise[i], pin1[i], pin2[i])
                     time.sleep(2)
@@ -344,6 +345,7 @@ def loop():
 
 
 def main():
+    global text,new_text
     while not exitapp:
         loop()
         if text != new_text:
