@@ -37,7 +37,12 @@ setRGB(60, 60, 60)
 def updateData(resource):
     global maximum
     summary = sparkworks.summary(resource)
-    val_kwh = summary["minutes5"][0] / 1000
+    latestTime = time.gmtime(summary["latestTime"] / 1000)
+    secs_in_5_min = (latestTime.tm_min - (latestTime.tm_min / 5) * 5) * 60 + latestTime.tm_sec
+    rate = secs_in_5_min / (5 * 60.0)
+    val_kwh = 0
+    if rate != 0:
+        val_kwh = (summary["minutes5"][0] / 1000) / rate
     val_max = max(summary["minutes5"]) / 1000
     return (float("{0:.1f}".format(val_kwh)), float("{0:.1f}".format(val_max)))
 
@@ -103,7 +108,9 @@ def main():
         basemax = max(maximum[0], maximum[1], maximum[2])
         print "Maximum base:" + str(basemax)
         for i in [0, 1, 2]:
-            print phases[i]["uri"], power_consumption[i], map_value_to_leds(basemax, power_consumption[i], 7)
+            print phases[i]["uri"], "This 5 min estimate:" + str(
+                power_consumption[i]) + "Wh", "This hour estimate:" + str(
+                power_consumption[i] * 12) + "Wh", map_value_to_leds(basemax, power_consumption[i], 7)
         arduinoGauge.write(map_value_to_leds(basemax, power_consumption[0], 7),
                            map_value_to_leds(basemax, power_consumption[1], 7),
                            map_value_to_leds(basemax, power_consumption[2], 7))
