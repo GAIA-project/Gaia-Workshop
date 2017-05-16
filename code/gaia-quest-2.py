@@ -350,8 +350,9 @@ def main():
         loop()
         if text != new_text:
             text = new_text
+            print "settext", text
             setText(text)
-        time.sleep(0.5)
+        # time.sleep(0.5)
 
 
 try:
