@@ -83,7 +83,7 @@ Interruptor = 0
 poten = 0
 for i in [0, 1, 2]:
     grovepi.pinMode(pin1[i], "OUTPUT")
-grovepi.pinMode(pin2[i], "OUTPUT")
+    grovepi.pinMode(pin2[i], "OUTPUT")
 
 grovepi.pinMode(Interruptor, "INPUT")
 grovepi.pinMode(Button, "INPUT")
