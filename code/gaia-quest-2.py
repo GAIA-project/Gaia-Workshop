@@ -222,12 +222,12 @@ def loop():
             if mode == 0:
                 new_text = ("Mode1: Press the button to start")
                 setRGB(50, 50, 50)
-                time.sleep(1)
+                #time.sleep(1)
                 closeAllLeds()
             if mode == 1:
                 new_text = ("Mode2: Press the button to start")
                 setRGB(50, 50, 50)
-                time.sleep(2)
+                #time.sleep(2)
                 set = 7
         # closeAllLeds()
         if set == 2:
