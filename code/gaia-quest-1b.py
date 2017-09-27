@@ -58,16 +58,22 @@ def loop():
         mode=1
 
     if mode==0:
-	new_text="All leds close"
-	closeAllLeds()
-    if mode==1:
-        new_text="Leds  Open"
+	new_text="Blue leds"
 	#open led 1 color blue
 	grovepi.digitalWrite(pin1[0], 1)
         grovepi.digitalWrite(pin2[0], 0)
 	#open led 2 color blue
 	grovepi.digitalWrite(pin1[1], 1)
         grovepi.digitalWrite(pin2[1], 0)
+
+    if mode==1:
+        new_text="Red leds"
+	#open led 1 color red
+	grovepi.digitalWrite(pin1[0], 0)
+        grovepi.digitalWrite(pin2[0], 1)
+	#open led 2 color red
+	grovepi.digitalWrite(pin1[1], 0)
+        grovepi.digitalWrite(pin2[1], 1)
 
 def main():
     global text,new_text
