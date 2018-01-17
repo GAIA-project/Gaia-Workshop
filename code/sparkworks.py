@@ -101,6 +101,19 @@ def power_phases(site):
         _phases_ret.append(_phases[uri])
     return _phases_ret
 
+def current_phases(site):
+    _phases = {}
+    _uris = []
+
+    _resources = siteResources_all(site, "Electrical Current")
+    for _resource in _resources:
+        if not _resource["uri"].startswith("site-"):
+            _phases[_resource["uri"]] = _resource
+            _uris.append(_resource["uri"])
+    _phases_ret = []
+    for uri in sorted(_uris):
+        _phases_ret.append(_phases[uri])
+    return _phases_ret
 
 def total_power(site):
     _resources = siteResources_all(site, "Power Consumption")
