@@ -1,3 +1,5 @@
+
+#Show the Sensor Environemental values at the school 10 houres before. The value is an average of values in an houre. 
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os

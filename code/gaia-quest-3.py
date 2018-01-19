@@ -44,7 +44,7 @@ def updateData(resource):
     if rate != 0:
         val_kwh = (summary["minutes5"][0] / 1000) / rate
     val_max = max(summary["minutes5"]) / 1000
-    return (float("{0:.1f}".format(val_kwh)), float("{0:.1f}".format(val_max)))
+    return (float("{0:.1f}".format(float(val_kwh))), float("{0:.1f}".format(float(val_max))))
 
 
 def getData():

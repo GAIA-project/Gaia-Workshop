@@ -39,7 +39,7 @@ def updateData(resource):
     global maximum
     val = summary["latest"] 
     val_max = max(summary["minutes5"]) 
-    return (float("{0:.1f}".format(val)), float("{0:.1f}".format(val_max)))
+    return (float("{0:.1f}".format(float(val))), float("{0:.1f}".format(float(val_max))))
 
 
 def getData():

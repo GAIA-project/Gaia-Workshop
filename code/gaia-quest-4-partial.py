@@ -53,7 +53,7 @@ def updateData(resource):
     timestamp=summary["latestTime"]
     #print time	 
     val_max = max(summary["minutes60"]) 
-    return (val, float("{0:.1f}".format(val_max)))
+    return (val, float("{0:.1f}".format(float(val_max))))
 
 
 def getData():

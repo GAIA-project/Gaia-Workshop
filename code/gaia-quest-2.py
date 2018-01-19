@@ -32,7 +32,7 @@ exitapp = False
 def updateSiteData(site, param):
     resource = sparkworks.siteResource(site, param)
     latest = sparkworks.latest(resource)
-    latest_value = float("{0:.1f}".format(latest["latest"]))
+    latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
 
 

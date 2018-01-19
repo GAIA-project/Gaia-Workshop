@@ -53,7 +53,7 @@ def updateData(resource):
     timestamp=summary["latestTime"]
     #print time	 
     val_max = max(summary["minutes60"]) 
-    return (val, float("{0:.1f}".format(val_max)))
+    return (val, float("{0:.1f}".format(float(val_max))))
 
 
 def getData():
@@ -71,9 +71,9 @@ print "Sensors:"
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
 
-sparkworks.connect(properties.username, properties.password)
-for room in properties.the_power_room:
-	print '\t%s' % room.decode('utf-8')
+#sparkworks.connect(properties.username, properties.password)
+#for room in properties.the_power_room:
+#	print '\t%s' % room.decode('utf-8')
 
 
 #total Power
