@@ -78,9 +78,6 @@ thread.start()
 
 Button = 8
 Interruptor = 0
-
-# Motor=6
-poten = 0
 for i in [0, 1, 2]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
@@ -89,12 +86,12 @@ grovepi.pinMode(Interruptor, "INPUT")
 grovepi.pinMode(Button, "INPUT")
 
 # initialize the screen
-
 print "Press button to start..."
 setText(gaia_text.press_to_start)
 setRGB(50, 50, 50)
 time.sleep(1)
 
+#initialize the variables
 change = 0
 set = 0
 mode = 0
@@ -102,7 +99,7 @@ mode = 0
 text = ""
 new_text = ""
 
-
+# Find out the maximum value 
 def maximum(v, sensor, unit):
     global new_text
     max_value = max(v[0], v[1], v[2])
@@ -118,7 +115,7 @@ def maximum(v, sensor, unit):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
 
-
+#Find out the minimum value
 def minimum(v, sensor, unit):
     global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
@@ -134,14 +131,14 @@ def minimum(v, sensor, unit):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
 
-
+#Close all the leds
 def closeAllLeds():
     global pin1, pin2
     for i in [0, 1, 2]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
-
+#Show the luminosity
 def showLuminosity(light_value, a, b):
     if (light_value < 200):
         # red LED
@@ -152,7 +149,7 @@ def showLuminosity(light_value, a, b):
         grovepi.digitalWrite(a, 1)
         grovepi.digitalWrite(b, 0)
 
-
+#Show the 
 def showTemperature(temperature_value, a, b):
     if 18 < temperature_value < 25:
         # BLue LED
