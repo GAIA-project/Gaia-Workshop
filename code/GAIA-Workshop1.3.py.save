@@ -14,7 +14,7 @@ import sparkworks
 
 import grovepi
 from grove_rgb_lcd import *
-
+import threading
 
 #select pins for the leds
 pin1 = [2, 4, 6]
@@ -33,6 +33,17 @@ noise = [0, 0, 0]
 
 
 exitapp = False
+
+def button
+       try:
+        if (grovepi.digitalRead(Button)):
+            show = 0
+            change = 1
+            set = set + 1
+            time.sleep(.5)
+    except IOError:
+        print "Button Error"
+    
 
 #Take new values from the data base 
 def updateSiteData(site, param):
@@ -190,8 +201,7 @@ closeAllLeds()
 
 def loop():
     global mode, set, new_text
-    value = grovepi.analogRead(Interruptor) 
-    print "value:",value	 
+    value = grovepi.analogRead(Interruptor)
     #check the position of the switch	
     if value < 500:
         if mode == 1:

@@ -14,7 +14,7 @@ import sparkworks
 
 import grovepi
 from grove_rgb_lcd import *
-
+import threading
 
 #select pins for the leds
 pin1 = [2, 4, 6]
@@ -30,9 +30,54 @@ luminosity = [0, 0, 0]
 temperature = [0, 0, 0]
 humidity = [0, 0, 0]
 noise = [0, 0, 0]
+swvalue=0
 
+#Select the pins Outputs and inputs 
+Button = 8
+grovepi.pinMode(Button, "INPUT")
+Interruptor = 0
+grovepi.pinMode(Interruptor, "INPUT")
 
+for i in [0, 1, 2]:
+    grovepi.pinMode(pin1[i], "OUTPUT")
+    grovepi.pinMode(pin2[i], "OUTPUT")
+
+#initiliaze global variables
+mode=0
+show=0
+change=0
+set=0
 exitapp = False
+
+#Function that check the button
+def checkButton():
+	global show,change,set,exitapp, mode, Button
+	try:
+        	if (grovepi.digitalRead(Button)):
+			print "Pressing button..."
+            		show = 0
+            		change = 1
+            		set = set + 1
+           		time.sleep(.2)
+    	except IOError:
+        	print "Button Error"
+#Function that check the switch position	
+def checkSwitch():
+	global show,mode,change,set,exitapp
+    	swvalue = grovepi.analogRead(0)	
+	if swvalue < 800:
+       		 if mode == 1:
+            		print "Switch change 1"
+			set = 0
+        		mode = 0
+        		change = 0
+    	else:
+        	 if mode == 0:
+			print "Switch change 2"
+            		set = 6
+        		mode = 1
+        		change = 0
+
 
 #Take new values from the data base 
 def updateSiteData(site, param):
@@ -82,25 +127,11 @@ getData()
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
 
-Button = 8
-Interruptor = 0
-for i in [0, 1, 2]:
-    grovepi.pinMode(pin1[i], "OUTPUT")
-    grovepi.pinMode(pin2[i], "OUTPUT")
-
-grovepi.pinMode(Interruptor, "INPUT")
-grovepi.pinMode(Button, "INPUT")
-
 # initialize the screen
 print "Press button to start..."
 setText(gaia_text.press_to_start)
 setRGB(50, 50, 50)
 time.sleep(1)
-
-#initialize the variables
-change = 0
-set = 0
-mode = 0
 
 text = ""
 new_text = ""
@@ -187,35 +218,9 @@ def showNoise(noise_value, a, b):
 #close all the leds
 closeAllLeds()
 
-
 def loop():
-    global mode, set, new_text
-    value = grovepi.analogRead(Interruptor) 
-    print "value:",value	 
-    #check the position of the switch	
-    if value < 500:
-        if mode == 1:
-            set = 0
-        mode = 0
-        change = 0
-    else:
-        if mode == 0:
-            set = 6
-        mode = 1
-        change = 0
-
-    #check the position of the Button
-    try:
-        if (grovepi.digitalRead(Button)):
-            show = 0
-            change = 1
-            set = set + 1
-            time.sleep(.5)
-    except IOError:
-        print "Button Error"
-
+    global new_text, change, show, set
     show = 1
-
     if (change or show):
         if change:
             change = 0
@@ -349,7 +354,10 @@ def loop():
 
 def main():
     global text,new_text
+	
     while not exitapp:
+	checkButton()
+	checkSwitch()	
         loop()
         if text != new_text:
             text = new_text
