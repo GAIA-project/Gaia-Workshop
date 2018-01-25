@@ -49,26 +49,25 @@ closeAllLeds()
 def loop():
     global mode, led, new_text
     value = grovepi.analogRead(Interruptor)
-    print "Read value:", value
      	   
     #interruptor off
     if value < 800:
-	mode=0
+		mode=0
     #interruptor on 
     else:
         mode=1
 
     if mode==0:
-	new_text="All leds close"
-	closeAllLeds()
+		new_text="All leds close"
+		closeAllLeds()
     if mode==1:
-        new_text="Leds  Open"
-	#open led 1 color blue
-	grovepi.digitalWrite(pin1[0], 1)
-        grovepi.digitalWrite(pin2[0], 0)
-	#open led 2 color blue
-	grovepi.digitalWrite(pin1[1], 1)
-        grovepi.digitalWrite(pin2[1], 0)
+		new_text="Leds  Open"
+		#open led 1 color blue
+		grovepi.digitalWrite(pin1[0], 1)
+		grovepi.digitalWrite(pin2[0], 0)
+		#open led 2 color blue
+		grovepi.digitalWrite(pin1[1], 1)
+		grovepi.digitalWrite(pin2[1], 0)
 
 def main():
     global text,new_text

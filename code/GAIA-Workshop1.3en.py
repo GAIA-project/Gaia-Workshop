@@ -45,7 +45,6 @@ for i in [0, 1, 2]:
 #initiliaze global variables
 mode=0
 show=0
-change=0
 set=0
 exitapp = False
 
@@ -55,29 +54,35 @@ def checkButton():
 	try:
         	if (grovepi.digitalRead(Button)):
 			print "Pressing button..."
-            		show = 0
-            		change = 1
-            		set = set + 1
-           		time.sleep(.2)
+			if show==1:
+            			show = 0
+			if set==5:
+				set=0
+			elif set==14:
+				set=0
+			else:
+				#print "Set", set
+            			set = set + 1
+			time.sleep(.3)
     	except IOError:
         	print "Button Error"
 #Function that check the switch position	
 def checkSwitch():
 	global show,mode,change,set,exitapp
-    	swvalue = grovepi.analogRead(0)	
-	if swvalue < 800:
+    	swvalue = grovepi.analogRead(0)
+	#print "SWvalue:",swvalue	
+	if swvalue < 500:
        		 if mode == 1:
-            		print "Switch change 1"
+            		print "Switch to mode 1"
 			set = 0
         		mode = 0
-        		change = 0
     	else:
         	 if mode == 0:
-			print "Switch change 2"
-            		set = 6
+			print "Switch to mode 2"
+            		set = 0
         		mode = 1
-        		change = 0
-
+	time.sleep(.3)
+	
 
 #Take new values from the data base 
 def updateSiteData(site, param):
@@ -220,23 +225,34 @@ closeAllLeds()
 
 def loop():
     global new_text, change, show, set
-    show = 1
-    if (change or show):
-        if change:
-            change = 0
-            show = 0
-        if set == 1:
-            new_text = ("Show Data excercise")
-            setRGB(50, 50, 50)
-            time.sleep(1)
-
-            if mode == 0:
-                new_text = ("Mode1: Press the button to start")
-                setRGB(50, 50, 50)
+    show2 = 1  
+    #show=1
+    #set=0
+    #mode=0
+    #if (change or show):
+    if (show2):
+        #if change:
+            #change = 0
+         #   show = 0
+	if set==0:
+	    #show=1
+	    #set=1 	
+	    if mode==0:
+ 	        new_text = ("Mode1: Press the button to start")
+        	setRGB(50, 50, 50)
                 closeAllLeds()
+            if mode==1:
+		new_text = ("Mode2: Press the button to start")
+ 	        setRGB(50, 50, 50)
+                closeAllLeds()	
+        if set == 1:
+            #new_text = ("Show Data excercise")
+            #setRGB(50, 50, 50)
+            #time.sleep(1)
+	    show=0 	
+            if mode == 0:
+		set = 2
             if mode == 1:
-                new_text = ("Mode2: Press the button to start")
-                setRGB(50, 50, 50)
                 set = 7
         if set == 2:
             if (show):
@@ -302,10 +318,11 @@ def loop():
                 new_text = ("NOISE           " + gaia_text.click_to_continue)
                 setRGB(60, 60, 60)
                 show = 1
-        if set == 6:
-            set = 0
-            new_text = ("Press the button to start!")
-            setRGB(60, 60, 60)
+      #  if set == 6:
+#	    set=1	
+            #set = 0
+ #           new_text = ("Press the button to start!")
+  #          setRGB(60, 60, 60)
         if set == 7:
             # maximum light
             print "Maximum Luminosity", luminosity
@@ -346,10 +363,11 @@ def loop():
             print "Minimum Noise", noise
             minimum(noise, "Noise", " dB")
             time.sleep(.1)
-        if set == 15:
-            set = 0
-            new_text = ("Press the button to start...")
-            setRGB(60, 60, 60)
+        #if set == 15:
+	 #   set=1	
+            #set = 0
+          #  new_text = ("Press the button to start...")
+           # setRGB(60, 60, 60)
 
 
 def main():
