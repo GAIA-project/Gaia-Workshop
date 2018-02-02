@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os
@@ -80,15 +79,17 @@ def showLuminosity(light_value, a, b):
 
 
 
-print ("Username: \n\t%s\n" % properties.username).encode("utf8", "replace")
-print "Sensors:"
+#Print rooms
+print "όνομα χρήστη:\n\t%s\n" % properties.username
+print "Επιλεγμένη αίθουσα:"
+for room in properties.the_rooms:
+    print '\t%s' % room.decode('utf-8')
+print '\n'
 
 
 #total Power
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
-
-
 new_text="Click button to start!"
 
 
@@ -102,20 +103,18 @@ def main():
     	while not exitapp:
 		#detect Button that choose houre
 		try:
-        		if (grovepi.digitalRead(Button1)):
-		       		setText("New Houre")
+			if (grovepi.digitalRead(Button1)):
+				setText("New Houre")
 				t=t+1
 				if t==24:
 					setText("Take new data")
 					t=0
-	           		time.sleep(.5)
-				print "houre"+str(t)
+				time.sleep(.4)
     		except IOError:
       			print "Button Error"
 		#Detect the button that choose room
 		try:
                         if (grovepi.digitalRead(Button2)):
-                                #setText("click...")
                                 rm=rm+1
                                 if rm>=2:
                                         rm=0
@@ -126,8 +125,10 @@ def main():
 
 
 		if t==0:
+			print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
 			getSensorData("Luminosity")
 			new_text="Getting data..."
+			setRGB(50, 50, 50)
 			t=1
 
 		else:
@@ -144,11 +145,11 @@ def main():
 
 
 		if text != new_text:
-            		text = new_text
-			print "Luminosity:",properties.the_rooms[rm], val
+			text = new_text
+			print "φωτεινότητα:",properties.the_rooms[rm], val
 
-            		#print "LCD show:", text
-       			setText(text)
+			#print "LCD show:", text
+			setText(text)
 
 
 

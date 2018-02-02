@@ -1,8 +1,5 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
-#import libraries
 import os
 import sys
 
@@ -40,7 +37,7 @@ for i in [0, 1, 2]:
 #initiliaze global variables
 set=0
 exitapp = False
-show=0
+
 #Take new values from the data base 
 def updateSiteData(site, param):
     resource = sparkworks.siteResource(site, param)
@@ -60,6 +57,9 @@ def threaded_function(arg):
     while not exitapp:
         getData()
         
+#Print rooms
+print "όνομα χρήστη:\n\t%s\n" % properties.username
+print "Επιλεγμένη αίθουσα:"
 for room in properties.the_rooms:
     print '\t%s' % room.decode('utf-8')
 print '\n'
@@ -67,6 +67,7 @@ print '\n'
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
 
+print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
 setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
 getData()
@@ -133,7 +134,7 @@ def checkButton():
 	global set,exitapp, mode
 	try:
         	if (grovepi.digitalRead(Button)):
-			print "Click the button"
+			print "έχετε πιέσει το κουμπί"
 			if (set<5):
 				set=set+1
 			else:
@@ -152,27 +153,27 @@ closeAllLeds()
 def loop():
     global new_text, change,show, set
     if set<=2:
-	showLuminosity(luminosity[set], pin1[set], pin2[set])
-	print "Luminosity:", properties.the_rooms[set]
-	print (luminosity[set])
-	new_text=("Light:" + str(luminosity[set]))
-	setRGB(R[set], G[set], B[set])
-	time.sleep(.1)
+		showLuminosity(luminosity[set], pin1[set], pin2[set])
+		print "φωτεινότητα:", properties.the_rooms[set]
+		print (luminosity[set])
+		new_text=("Light:" + str(luminosity[set]))
+		setRGB(R[set], G[set], B[set])
+		time.sleep(.1)
     if set==3:
-	new_text="The LED show luminosity range"
-	setRGB(50, 50, 50)
+		new_text="The LED show luminosity range"
+		setRGB(50, 50, 50)
 	
-	for i in [0,1,2]:	
-		showLuminosity(luminosity[i], pin1[i], pin2[i])
+		for i in [0,1,2]:	
+			showLuminosity(luminosity[i], pin1[i], pin2[i])
 		    
     if set == 4:
-	# maximum light
-	print "Maximum Luminosity"
-	maximum(luminosity, "Luminosity", " ")
-	time.sleep(.1)
+		# maximum light
+		print "μέγιστη φωτεινότητα [μοβ,πορτοκαλί,πράσινο]"
+		maximum(luminosity, "Luminosity", " ")
+		time.sleep(.1)
     if set == 5:
         # minimum light
-        print "Minimum Luminosity"
+        print "ελάχιστο φωτεινότητα [μοβ,πορτοκαλί,πράσινο]"
         minimum(luminosity, "Luminosity", " ")
         time.sleep(.1)
 
@@ -185,7 +186,7 @@ def main():
         loop()
         if text != new_text:
             text = new_text
-            print "Swo LCD", text
+            print "LCD μήνυμα:", text
             setText(text)
 
 try:
