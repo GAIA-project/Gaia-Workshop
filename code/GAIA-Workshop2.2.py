@@ -40,7 +40,7 @@ exitapp = False
 
 #Take new values from the data base 
 def updateSiteData(site, param):
-    resource = sparkworks.siteResource(site, param)
+    resource = sparkworks.siteResourceDevice(site, param)
     latest = sparkworks.latest(resource)
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
