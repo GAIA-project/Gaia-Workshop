@@ -42,7 +42,9 @@ def sites():
 def main_site():
     for site in sites():
         if len(site["subsites"]) != 0:
-            return site
+            for user in site['sharedUsers']:
+                if properties.username == user['username'] and user['viewPermission'] and user['reusePermission']:
+                    return site
 
 
 def rooms():
@@ -101,6 +103,7 @@ def power_phases(site):
         _phases_ret.append(_phases[uri])
     return _phases_ret
 
+
 def current_phases(site):
     _phases = {}
     _uris = []
@@ -114,6 +117,7 @@ def current_phases(site):
     for uri in sorted(_uris):
         _phases_ret.append(_phases[uri])
     return _phases_ret
+
 
 def total_power(site):
     _resources = siteResources_all(site, "Power Consumption")
