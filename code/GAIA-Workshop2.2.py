@@ -40,7 +40,7 @@ exitapp = False
 
 #Take new values from the data base 
 def updateSiteData(site, param):
-    resource = sparkworks.siteResource(site, param)
+    resource = sparkworks.siteResourceDevice(site, param)
     latest = sparkworks.latest(resource)
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
@@ -135,7 +135,7 @@ def checkButton():
 	try:
         	if (grovepi.digitalRead(Button)):
 			print "έχετε πιέσει το κουμπί"
-			if (set<5):
+			if (set<4):
 				set=set+1
 			else:
 				set=0
@@ -159,19 +159,13 @@ def loop():
 		new_text=("Light:" + str(luminosity[set]))
 		setRGB(R[set], G[set], B[set])
 		time.sleep(.1)
-    if set==3:
-		new_text="The LED show luminosity range"
-		setRGB(50, 50, 50)
-	
-		for i in [0,1,2]:	
-			showLuminosity(luminosity[i], pin1[i], pin2[i])
 		    
-    if set == 4:
+    if set == 3:
 		# maximum light
 		print "μέγιστη φωτεινότητα [μοβ,πορτοκαλί,πράσινο]"
 		maximum(luminosity, "Luminosity", " ")
 		time.sleep(.1)
-    if set == 5:
+    if set == 4:
         # minimum light
         print "ελάχιστο φωτεινότητα [μοβ,πορτοκαλί,πράσινο]"
         minimum(luminosity, "Luminosity", " ")
