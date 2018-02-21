@@ -9,6 +9,7 @@ from threading import Thread
 import gaia_text
 import properties
 import sparkworks
+import arduinoGauge
 
 import grovepi
 from grove_rgb_lcd import *
@@ -61,30 +62,33 @@ def threaded_function(arg):
         getData()
 def threaded_function2(arg):
     while not exitapp:
-        checkButton()
-        
-def maximum(v):
-    max_value = max(v[0], v[1], v[2])
-    #print max_value, v
-    for i in [0, 1, 2]:
-        if v[i] == max_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
+	checkButton()
 
-#Find out the minimum value
-def minimum(v):
-    min_value = min(v[0], v[1], v[2])
-    #print min_value, v
-    for i in [0, 1, 2]:
-        if v[i] == min_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
+def mapDItoLED(di):
+    led=0
+    word=" "		
+    if di < -1.7:
+	led=1
+	word="POLY KPIO"
+    if -1.7 < di < 12.9:
+	led=2
+	word="KPIO"
+    if 12.9 < di < 14.9:
+	led=3
+	word="DPOSIA"
+    if 15.0 < di < 19.9:
+	led=4
+	word="KANONINO"
+    if 20.0 < di < 26.4:
+	led=5
+	word="ZESTH"
+    if 26.5 < di < 29.9:
+	led=6
+	word="POLY ZESTH"
+    if 30.0< di:
+	led=7
+	word="KAFSONAS"
+    return led,word
 
 #Close all the leds
 def closeAllLeds():
@@ -109,16 +113,16 @@ def checkButton():
     	except IOError:
         	print "Button Error"
 
-def calHI(t,hum):
-	tmp=1.8*t+32
-	#print "tempera",tmp
-	hy=-42.379+2.04901523*tmp+10.14333127*hum-0.22475541*tmp*hum-0.00683783*tmp*tmp-0.05481717*hum*hum+0.00122874*tmp*tmp*hum
-	hy=hy+0.00085282*tmp*hum*hum-0.00000199*tmp*tmp*hum*hum
-	#print "HY:",hy
-	return float("{0:.2f}".format(float(hy)))
+def calDI(t,rh):
+	DI=t-0.55*(1-0.01*rh)*(t-14.5)
+	return float("{0:.2f}".format(float(DI)))
 
-#Print rooms
-closeAllLeds()
+
+print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+setText(gaia_text.loading_data)
+setRGB(50, 50, 50)
+arduinoGauge.connect()
+arduinoGauge.write(1, 1, 1)
 
 print "όνομα χρήστη:\n\t%s\n" % properties.username
 print "Επιλεγμένη αίθουσα:"
@@ -129,10 +133,6 @@ print '\n'
 
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
-
-print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
-setText(gaia_text.loading_data)
-setRGB(50, 50, 50)
 getData()
 
 thread = Thread(target=threaded_function, args=(10,))
@@ -140,29 +140,38 @@ thread.start()
 thread2 = Thread(target=threaded_function2, args=(10,))
 thread2.start()
 
+
+
 text = ""
 new_text = ""
 
-
 def loop():
-    global new_text, change,show, set, text
-    hi=[0,0,0]	
-    for i in [0,1,2]:	
-    	hi[i]=calHI(temperature[i],humidity[i])
-    maximum(hi)	
-    new_text=("T:" + str(temperature[set])+"oC,H:"+str(humidity[set])+"%RH HI = "+str(hi[set]))
+    global new_text, change,show, set,text
+    DI=[0,0,0]
+    led=[0,0,0]
+    word=[" "," "," "]
+    for i in [0,1,2]:
+    	DI[i]=calDI(temperature[i],humidity[i])
+    	m=mapDItoLED(DI[i])
+    	led[i]=m[0]
+    	word[i]=m[1]
+
+    arduinoGauge.write(led[0],led[1],led[2])
+    new_text=(" DI = " +str(DI[set])+"     "+word[set])
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)
     if text != new_text:
 	print "θερμοκρασία ", properties.the_rooms[set], ": ", temperature[set], "  Centrigrade"
     	print "υγρασία", properties.the_rooms[set], ": ",humidity[set], " %RH"
-    	print "HI", properties.the_rooms[set], ": ",hi[set]
+    	print "DI", properties.the_rooms[set], ": ",DI[set], word[set]
         text = new_text
         setText(text)
 
 
 def main():
+    global new_text,text,set
     while not exitapp:
+	#checkButton()
         loop()
 
 try:
