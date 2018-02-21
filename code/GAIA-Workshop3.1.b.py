@@ -144,8 +144,14 @@ def breakSleep(the_set):
         if (the_set!=set):
 		continue
 	time.sleep(.1)
+#Close all the leds
+def closeAllLeds():
+    global pin1, pin2
+    for i in [0, 1, 2]:
+        grovepi.digitalWrite(pin1[i], 0)
+        grovepi.digitalWrite(pin2[i], 0)
 	
-
+closeAllLeds()
 #Print rooms
 print "όνομα χρήστη:\n\t%s\n" % properties.username
 print "Επιλεγμένη αίθουσα:"
@@ -177,8 +183,7 @@ def loop():
     breakSleep(set)
 
     for i in [0,1,2]:
-        print "θερμοκρασία μέσος όρος :", properties.the_rooms[i]
-        print (temperature[i])
+        print "θερμοκρασία μέσος όρος :", properties.the_rooms[i],": ",temperature[i], " oC"
         new_text=("Avg Temperature:" + str(temperature[i])+" oC")
         setText(new_text)
         setRGB(R[i], G[i], B[i])
@@ -191,8 +196,7 @@ def loop():
     breakSleep(set)
 
     for i in [0,1,2]:
-        print "υγρασία μέσος όρος:", properties.the_rooms[i]
-        print (humidity[i])
+        print "υγρασία μέσος όρος:", properties.the_rooms[i], ":",humidity[i], " %RH"
         new_text=("Avg Humidity:   " + str(humidity[i])+" %RH") 
         setText(new_text)
        	setRGB(R[i], G[i], B[i])

@@ -13,7 +13,7 @@ import sparkworks
 import grovepi
 from grove_rgb_lcd import *
 import threading
-
+import math
 #select pins for the leds
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
@@ -59,32 +59,11 @@ def getData():
 def threaded_function(arg):
     global temperature, humidity
     while not exitapp:
-        #getData()
-	checkButton()
-
-#check button        
-def checkButton():
-        global set,exitapp, mode
-        try:
-                if (grovepi.digitalRead(Button)):
-                        print "έχετε πιέσει το κουμπί"
-                        if (set==0):
-                                set=1
-                        else:
-                                set=0
-                        time.sleep(.5)
-
-        except IOError:
-                print "Button Error"
-
-# Find out the maximum value 
-def maximum(v, sensor, unit):
-    global new_text
+        getData()
+        
+def maximum(v):
     max_value = max(v[0], v[1], v[2])
-    print max_value, v
-    #print(gaia_text.max_message % (sensor, max_value, unit))
-    new_text = (gaia_text.max_message % (sensor, max_value, unit))
-    setRGB(60, 60, 60)
+    #print max_value, v
     for i in [0, 1, 2]:
         if v[i] == max_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -94,13 +73,9 @@ def maximum(v, sensor, unit):
             grovepi.digitalWrite(pin2[i], 0)
 
 #Find out the minimum value
-def minimum(v, sensor, unit):
-    global pin1, pin2, new_text
+def minimum(v):
     min_value = min(v[0], v[1], v[2])
-    print min_value, v
-    #print(gaia_text.min_message % (sensor, min_value, unit))
-    new_text = (gaia_text.min_message % (sensor, min_value, unit))
-    setRGB(60, 60, 60)
+    #print min_value, v
     for i in [0, 1, 2]:
         if v[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -116,23 +91,39 @@ def closeAllLeds():
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
-#Sleep that break on click
-def breakSleep(the_set):
-    global set
-    i=0 
-    while (i<50):
-        i=i+1
-        if (the_set!=set):
-                continue
-        time.sleep(.1)
 
-closeAllLeds()
+#Function that check the button
+def checkButton():
+	global set,exitapp, mode
+	try:
+        	if (grovepi.digitalRead(Button)):
+			print "έχετε πιέσει το κουμπί"
+			if (set<2):
+				set=set+1
+			else:
+				set=0
+			time.sleep(.5)
+
+    	except IOError:
+        	print "Button Error"
+
+def calHI(t,hum):
+	tmp=1.8*t+32
+	#print "tempera",tmp
+	hy=-42.379+2.04901523*tmp+10.14333127*hum-0.22475541*tmp*hum-0.00683783*tmp*tmp-0.05481717*hum*hum+0.00122874*tmp*tmp*hum
+	hy=hy+0.00085282*tmp*hum*hum-0.00000199*tmp*tmp*hum*hum
+	#print "HY:",hy
+	return float("{0:.2f}".format(float(hy)))
+
 #Print rooms
+closeAllLeds()
+
 print "όνομα χρήστη:\n\t%s\n" % properties.username
 print "Επιλεγμένη αίθουσα:"
 for room in properties.the_rooms:
     print '\t%s' % room.decode('utf-8')
 print '\n'
+
 
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
@@ -140,58 +131,38 @@ rooms = sparkworks.select_rooms(properties.the_rooms)
 print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
 setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
+getData()
 
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
-
 
 text = ""
 new_text = ""
 
 
 def loop():
-    global new_text,set
-    # get data
-    print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
-    setText(gaia_text.loading_data)
-    setRGB(50, 50, 50)
-    getData()	
-    # minimum temperature
-    print "ελάχιστο θερμοκρασία [μοβ,πορτοκαλί,πράσινο]"
-    minimum(temperature, "Temperature", "oC ")
-    setText(new_text)
-    #time.sleep(3)
-    breakSleep(set);
-    for i in [0,1,2]:
-	print "θερμοκρασία:", properties.the_rooms[i],":", temperature[i], " oC"
-	new_text=("Temperature:    " + str(temperature[i])+" oC")
-	setText(new_text)
-	setRGB(R[i], G[i], B[i])
-	#time.sleep(3)
-	breakSleep(set);
-
-    # maximum humidity
-    print "μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]"
-    maximum(humidity, "Humidity", "%RH")
-    setText(new_text)
-    #time.sleep(3)
-    breakSleep(set);
-
-    for i in [0,1,2]:
-	print "υγρασία: ",properties.the_rooms[i],":",humidity[i]," %RH"
-	new_text=("Humidity:       " + str(humidity[i])+" %RH")	
-	setText(new_text)
-	setRGB(R[i], G[i], B[i])
-	breakSleep(set);
-
-	#time.sleep(3)
-	
+    global new_text, change,show, set
+    hi=[0,0,0]	
+    for i in [0,1,2]:	
+    	hi[i]=calHI(temperature[i],humidity[i])
+    maximum(hi)	
+    #showTemperature(temperature[set], pin1[set], pin2[set])    
+    new_text=("T:" + str(temperature[set])+"oC,H:"+str(humidity[set])+"%RH HI = "+str(hi[set]))
+    setRGB(R[set], G[set], B[set])
+    time.sleep(.1)
 
 def main():
-    #close all the leds
-    closeAllLeds()
+    global new_text,text,set
     while not exitapp:
+	checkButton()
+
         loop()
+        if text != new_text:
+	    print "θερμοκρασία ", properties.the_rooms[set], ": ", temperature[set], "  Centrigrade"
+    	    print "υγρασία:", properties.the_rooms[set], ": ",humidity[set], " %RH"
+            text = new_text
+            #print "LCD μήνυμα:", text
+            setText(text)
 
 try:
     main()
