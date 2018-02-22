@@ -114,6 +114,7 @@ def calHI(t,hum):
 	#print "tempera",tmp
 	hy=-42.379+2.04901523*tmp+10.14333127*hum-0.22475541*tmp*hum-0.00683783*tmp*tmp-0.05481717*hum*hum+0.00122874*tmp*tmp*hum
 	hy=hy+0.00085282*tmp*hum*hum-0.00000199*tmp*tmp*hum*hum
+	hy =(hy-32)*0.55
 	#print "HY:",hy
 	return float("{0:.2f}".format(float(hy)))
 

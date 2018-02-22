@@ -49,8 +49,6 @@ for i in [0, 1]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
-
-
 #initiliaze the LCD screen color and value
 text=gaia_text.loading_data
 setText(text)
@@ -78,7 +76,6 @@ def getSensorData():
 #Find out the minimum value
 def minimum(v):
     min_value = min(v[0], v[1])
-    #print min_value, v
     for i in [0, 1]:
         if v[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -94,7 +91,35 @@ def closeAllLeds():
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
+def mapDItoLED(di):
+    led=0
+    word=" "            
+    if di < -1.7:
+        led=1
+        word="POLY KPIO"
+    if -1.7 < di < 12.9:
+        led=2
+        word="KPIO"
+    if 12.9 < di < 14.9:
+        led=3
+        word="DPOSIA"
+    if 15.0 < di < 19.9:
+        led=4
+        word="KANONINO"
+    if 20.0 < di < 26.4:
+        led=5
+        word="ZESTH"
+    if 26.5 < di < 29.9:
+        led=6
+        word="POLY ZESTH"
+    if 30.0< di:
+        led=7
+        word="KAFSONAS"
+    return led,word
 
+def calDI(t,rh):
+    DI=t-0.55*(1-0.01*rh)*(t-14.5)
+    return float("{0:.2f}".format(float(DI)))
 closeAllLeds()
 #Print rooms
 print "όνομα χρήστη:\n\t%s\n" % properties.username
@@ -113,58 +138,65 @@ setRGB(50,50,50)
 
 
 def loop():
-    	global text, new_text, timestamp,t, rm, new_t, strtime,strdate
-	v=[0,0]
+    global text, new_text, timestamp,t, rm, new_t, strtime,strdate
+    #v=[0,0]
         #detect Button that choose houre
-        try:
-                if (grovepi.digitalRead(Button1)):
-                        print "on click1"
-                        setText("New Houre")
-                        t=t+1
-                        if t==24:
-                                setText("Take new data")
-                                t=0
-                        time.sleep(1)
-        except IOError:
-                print "Button Error"
-        #Detect the button that choose room
-        try:
-                if (grovepi.digitalRead(Button2)):
-                        print  "on click 2"
-                        rm=rm+1
-                        if rm>=2:
-                                rm=0
-                        time.sleep(1)
-        except IOError:
-                print "Button Error"
+    try:
+	if (grovepi.digitalRead(Button1)):
+		#print "on click1"
+                setText("New Houre")
+                t=t+1
+                if t==24:
+                	setText("Take new data")
+                        t=0
+                time.sleep(1)
+    except IOError:
+        print "Button Error"
+    #Detect the button that choose room
+    try:
+	if (grovepi.digitalRead(Button2)):
+        	#print  "on click 2"
+		rm=rm+1
+                if rm>=2:
+                	rm=0
+                time.sleep(1)
+    except IOError:
+	print "Button Error"
 
+    if t==0:
+	print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+	getSensorData()
+	new_text="Getting data..."
+	setRGB(50, 50, 50)
+	t=1
 
-	if t==0:
-		print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
-		getSensorData()
-		new_text="Getting data..."
-		setRGB(50, 50, 50)
-		t=1
-		
-	else:
-		if new_t != t:
-			new_t=t
-			timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(t-1))
-			strdate=timevalue.strftime('%Y-%m-%d %H:%M:%S')
-			strtime=timevalue.strftime('%H:%M:%S')
-			print strdate
-		#showTemperature(temperature[rm][new_t-1],pin1[rm],pin2[rm])
-		new_text= strtime + " T:" +  str("{0:.2f}".format(temperature[rm][new_t-1])) +"oC; H:" +str("{0:.2f}".format(humidity[rm][new_t-1]))+" %RH"
-		setRGB(R[rm], G[rm], B[rm])
-		v[0]=temperature[0][new_t-1]
-		v[1]=temperature[1][new_t-1]
-		minimum(v)
+    else:
+	if new_t != t:
+		new_t=t
+		timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(t-1))
+		strdate=timevalue.strftime('%Y-%m-%d %H:%M:%S')
+		strtime=timevalue.strftime('%H:%M:%S')
+		print strdate
+	#Calculate DI
+	DI=[0,0]
+	led=[0,0]
+   	word=[" "," "," "]
+    	for i in [0,1]:
+        	DI[i]=calDI(temperature[i][new_t-1],humidity[i][new_t-1])
+        	m=mapDItoLED(DI[i])
+        	led[i]=m[0]
+        	word[i]=m[1]
+		#Show minimum DI on the Leds
+	minimum(DI)
+	#sHOW DI on the LCD
+	new_text= (strtime + " DI:" +  str(DI[rm]) +"oC    "+ word[rm])
+	setRGB(R[rm], G[rm], B[rm])
 
-	if text != new_text:
-		text = new_text
-		print "θερμοκρασία:",properties.the_rooms[rm], "{0:.2f}".format(temperature[rm][new_t-1])
-		print "υγρασία:",properties.the_rooms[rm],"{0:.2f}".format(humidity[rm][new_t-1])
-		setText(text)
+    if text != new_text:
+	text = new_text
+	print "θερμοκρασία:",properties.the_rooms[rm], "{0:.2f}".format(temperature[rm][new_t-1])
+	print "υγρασία:",properties.the_rooms[rm],"{0:.2f}".format(humidity[rm][new_t-1])
+	setText(text)
 
 
 def main():     
