@@ -59,9 +59,7 @@ def getData():
 def threaded_function(arg):
     while not exitapp:
         getData()
-def threaded_function2(arg):
-    while not exitapp:
-        checkButton()
+
         
 def maximum(v):
     max_value = max(v[0], v[1], v[2])
@@ -98,16 +96,16 @@ def closeAllLeds():
 def checkButton():
 	global set,exitapp, mode
 	try:
-        	if (grovepi.digitalRead(Button)):
+		if (grovepi.digitalRead(Button)):
 			print "έχετε πιέσει το κουμπί"
 			if (set<2):
 				set=set+1
 			else:
 				set=0
-			time.sleep(.5)
+			time.sleep(.8)
 
-    	except IOError:
-        	print "Button Error"
+	except IOError:
+		print "Button Error"
 
 def calHI(t,hum):
 	tmp=1.8*t+32
@@ -138,12 +136,9 @@ getData()
 
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
-thread2 = Thread(target=threaded_function2, args=(10,))
-thread2.start()
 
 text = ""
 new_text = ""
-
 
 def loop():
     global new_text, change,show, set, text
@@ -164,6 +159,7 @@ def loop():
 
 def main():
     while not exitapp:
+	checkButton()	
         loop()
 
 try:
