@@ -42,7 +42,7 @@ grovepi.pinMode(ButtonPh, "INPUT")
 text=gaia_text.loading_data
 setText(text)
 
-setRGB(60, 60, 60)
+setRGB(60, 60, 60) 
 
 
 def updateData(resource):
@@ -88,6 +88,7 @@ print "\t%s" % phases[2]["uri"]
 
 
 new_text="Click button to start!"
+		    
 
 def map_value_to_leds(m, val, leds_available):
 	if val == 0:
@@ -98,10 +99,10 @@ def map_value_to_leds(m, val, leds_available):
 
 
 def main():
-    	global text, new_text,dev, ph, timestamp	
-   	time.sleep(1)
-    	led=[0,0,0]
-   	led_part=[0,0,0]
+    	global text, new_text,dev, ph, timestamp, power_consumption	
+	time.sleep(1)
+	led=[0,0,0]
+	led_part=[0,0,0]
         t=0
         ph=0
 	new_t=0
@@ -134,11 +135,9 @@ def main():
 		#Show Total Power (dev=0)	
 		if t==0:
 			getData()
-
         		basemax = max(maximum[0], maximum[1], maximum[2])
 			new_text="Getting data..."
 			t=1
-
 		else:
 			if new_t != t:
 				new_t=t
@@ -153,11 +152,11 @@ def main():
             				led[i]=map_value_to_leds(basemax, power_consumption[i][t-1]*230/1000, 11)
 	    				print led[i]
         				time.sleep(.1)
-				arduinoGauge.write(led[0],led[1],led[2])
+					arduinoGauge.write(led[0],led[1],led[2])
 			
-        		if ph==0:
+			if ph==0:
 				new_text= strtime + ": " +  str(float("{0:.2f}".format(p))) + "W"
-        			setRGB(60, 60, 60)
+				setRGB(60, 60, 60)
 			else:
             			new_text="ph" +str(ph) +":"+  str(float("{0:.2f}".format(power_consumption[ph-1][t-1]*230/1000))) + "W"
             			setRGB(R[ph-1], G[ph-1], B[ph-1])

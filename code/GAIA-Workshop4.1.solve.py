@@ -93,18 +93,23 @@ def main():
     time.sleep(1)
     led=[0,0,0]	
     while not exitapp:
-        basemax = max(maximum[0], maximum[1], maximum[2])
-        print "Maximum base:" + str(basemax)
-        for i in [0, 1, 2]:
-        	print phases[i]["uri"], " Current: " + str(current[i]) +" Ampere  "+ "Power: "+ str(power_consumption[i]) + " Wat" 
-            	led[i]=	map_value_to_leds(basemax, power_consumption[i], 7)
-	    	print led[i]
+	
+		p=power_consumption[0]+power_consumption[1]+power_consumption[2]
+		basemax = max(maximum[0], maximum[1], maximum[2])
+		print "Maximum base:" + str(basemax)
+		for i in [0, 1, 2]:
+			print phases[i]["uri"], " Current: " + str(current[i]) +" Ampere  "+ "Power: "+ str(power_consumption[i]) + " Wat" 
+			led[i]=	map_value_to_leds(basemax, power_consumption[i], 7)
+			print led[i]
 		arduinoGauge.write(led[0],led[1],led[2])
-      
-        for i in [0, 1, 2]:
-            setText("Phase " + str(i + 1) + "         " + str(power_consumption[i]) + "      W")
-            setRGB(R[i], G[i], B[i])
-            time.sleep(5)
+		time.sleep(0.5)
+		setText("Total Power:    " + str(p) + "       W")
+		setRGB(60, 60, 60)
+		time.sleep(10)
+		for i in [0, 1, 2]:
+			setText("Phase " + str(i + 1) + "         " + str(power_consumption[i]) + "      W")
+			setRGB(R[i], G[i], B[i])
+			time.sleep(5)
 
 
 try:
