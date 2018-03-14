@@ -85,6 +85,13 @@ def siteResourceDevice(site, observedProperty):
         if _resource["uri"].startswith("00") and _resource["property"] == observedProperty:
             return _resource
 
+def siteResourceDeviceRPi(site, observedProperty):
+    _resources = siteResources(site)
+    for _resource in _resources:
+        if _resource["uri"].startswith("gaia") and _resource["property"] == observedProperty:
+            return _resource
+
+
 
 def siteResources_all(site, observedProperty):
     _selected_resources = []
