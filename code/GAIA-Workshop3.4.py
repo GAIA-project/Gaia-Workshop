@@ -47,6 +47,9 @@ outTmp=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 outHum=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
 
+Patras= [38.246639,21.734573]
+Athens=[37.97945,23.71622]
+
 Button1=8
 Button2=7
 grovepi.pinMode(Button1, "INPUT")
@@ -98,12 +101,9 @@ def getOutsideData():
 	global outTem,outHum
 	#Outside weather necessary variables
 	api_key = "a96063dd6aacda945d68bb05209e848f"
-	lat = 38.246639
-	lng = 21.734573
-	Patras= [lat,lng]
 	current_time = datetime.datetime.now()
 	print "time:", current_time
-	forecast = forecastio.load_forecast(api_key, lat, lng, time=current_time)
+	forecast = forecastio.load_forecast(api_key, Patras[0], Patras[1], time=current_time)
 
 	byHour = forecast.hourly()
 	i=0
