@@ -8,7 +8,7 @@ import time
 from threading import Thread
 import gaia_text
 import properties
-import sparkworks
+from sparkworks import SparkWorks
 
 import grovepi
 from grove_rgb_lcd import *
