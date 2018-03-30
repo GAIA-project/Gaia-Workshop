@@ -40,8 +40,8 @@ exitapp = False
 
 #Take new values from the data base 
 def updateSiteData(site, param):
-    resource = sparkworks.siteResourceDevice(site, param)
-    latest = sparkworks.latest(resource)
+    resource = sworks.siteResourceDevice(site, param)
+    latest = sworks.latest(resource)
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
 
@@ -64,8 +64,9 @@ for room in properties.the_rooms:
     print '\t%s' % room.decode('utf-8')
 print '\n'
 
-sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
+sworks = SparkWorks(properties.client_id, properties.client_secret)
+sworks.connect(properties.username, properties.password)
+rooms = sworks.select_rooms(properties.the_rooms)
 
 print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
 setText(gaia_text.loading_data)
