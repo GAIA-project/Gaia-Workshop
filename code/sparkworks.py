@@ -36,6 +36,14 @@ def sites():
     else:
         response = apiGetAuthorized('/v1/location/site')
         the_sites = response.json()["sites"]
+	for site in the_sites:
+    		isReuse = False
+    		for user in site['sharedUsers']:
+        		if user['username'] == properties.username and user['reusePermission']:
+            			isReuse = True
+    		if isReuse:
+        		for subsite in site['subsites']:
+            			the_sites.append(subsite)
         return the_sites
 
 
