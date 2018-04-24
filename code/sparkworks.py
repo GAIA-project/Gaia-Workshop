@@ -19,6 +19,8 @@ the_site_resources = {}
 def connect(username, password):
     global token
     token = getToken(username, password)
+    properties.username = username
+    properties.password = password
 
 
 def getToken(username, password):
@@ -71,6 +73,7 @@ def select_rooms(room_names):
         for site in sites():
             if site["name"].encode('utf-8') in room_name:
                 _rooms.append(site)
+		break
     return _rooms
 
 
@@ -83,6 +86,7 @@ def siteResources(site):
 
 def siteResource(site, observedProperty):
     _resources = siteResources(site)
+    #print _resources
     for _resource in _resources:
         if _resource["uri"].startswith("site-") and _resource["property"] == observedProperty:
             return _resource
@@ -107,7 +111,15 @@ def siteResources_all(site, observedProperty):
     _resources = siteResources(site)
     for _resource in _resources:
         if observedProperty in _resource["property"]:
-            _selected_resources.append(_resource)
+            	_selected_resources.append(_resource)
+    return _selected_resources
+
+def siteResources_all_exact(site, observedProperty):
+    _selected_resources = []
+    _resources = siteResources(site)
+    for _resource in _resources:
+        if observedProperty == _resource["property"]:
+            	_selected_resources.append(_resource)
     return _selected_resources
 
 
@@ -115,7 +127,7 @@ def power_phases(site):
     _phases = {}
     _uris = []
 
-    _resources = siteResources_all(site, "Power Consumption")
+    _resources = siteResources_all(site, "Calculated Power Consumption")
     for _resource in _resources:
         if not _resource["uri"].startswith("site-"):
             _phases[_resource["uri"]] = _resource
@@ -147,6 +159,11 @@ def total_power(site):
         if _resource["uri"].startswith("site-"):
             return _resource
 
+def total_site(site,name):
+    _resources = siteResources_all_exact(site, name)
+    for _resource in _resources:
+        if _resource["uri"].startswith("site-"):
+            return _resource
 
 def latest(resource):
     response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/latest')
