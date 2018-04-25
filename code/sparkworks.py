@@ -12,15 +12,18 @@ client_id = properties.client_id
 client_secret = properties.client_secret
 token = {}
 
+usernm = ""
+passwd = ""
+
 the_sites = []
 the_site_resources = {}
 
 
 def connect(username, password):
-    global token
+    global token, usernm, passwd
     token = getToken(username, password)
-    properties.username = username
-    properties.password = password
+    usernm = username
+    passwd = password
 
 
 def getToken(username, password):
@@ -33,27 +36,24 @@ def getToken(username, password):
 
 def sites():
     global token, the_sites
-    if len(the_sites) != 0:
-        return the_sites
-    else:
-        response = apiGetAuthorized('/v1/location/site')
-        the_sites = response.json()["sites"]
-	for site in the_sites:
-    		isReuse = False
-    		for user in site['sharedUsers']:
-        		if user['username'] == properties.username and user['reusePermission']:
-            			isReuse = True
-    		if isReuse:
-        		for subsite in site['subsites']:
-            			the_sites.append(subsite)
-        return the_sites
+    response = apiGetAuthorized('/v1/location/site')
+    the_sites = response.json()["sites"]
+    for site in the_sites:
+        isReuse = False
+        for user in site['sharedUsers']:
+            if user['username'] == usernm and user['reusePermission']:
+                    isReuse = True
+        if isReuse:
+            for subsite in site['subsites']:
+                    the_sites.append(subsite)
+    return the_sites
 
 
 def main_site():
     for site in sites():
         if len(site["subsites"]) != 0:
             for user in site['sharedUsers']:
-                if properties.username == user['username'] and user['viewPermission'] and user['reusePermission']:
+                if usernm == user['username'] and user['viewPermission'] and user['reusePermission']:
                     return site
 
 
