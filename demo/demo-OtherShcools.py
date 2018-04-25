@@ -37,7 +37,7 @@ for i in range(len(properties.school)):
 
 def updateData(resource):
     summary = sparkworks.summary(resource)
-    value = summary["minutes60"][0]
+    value = summary["minutes60"][1]
     return(float("{0:.1f}".format(float(value))))
 
 
@@ -65,7 +65,6 @@ def getData(idx):
                   properties.school[idx]['orange'],
                   properties.school[idx]['green'] ]
     rooms = sparkworks.select_rooms(the_rooms)
-    print rooms
     motion = [0, 0, 0]
     for i in range(len(rooms)):
         motion[i] = updateSiteData(rooms[i], "Motion")
@@ -116,10 +115,10 @@ def main():
 
         if idx_changed:
             setText(properties.school[school_idx]['name'])
-            print("School Index:" + str(school_idx))
-            print(properties.school[school_idx]['name'])
-            for i in range(len(school_data[school_idx])):
-                print(school_data[school_idx][i])
+            #print("School Index:" + str(school_idx))
+            #print(properties.school[school_idx]['name'])
+            #for i in range(len(school_data[school_idx])):
+                #print(school_data[school_idx][i])
                 
         if idx_changed or school_data[school_idx][6]:
             power_led = mapValueToLeds(power_max, school_data[school_idx][0], 8)
