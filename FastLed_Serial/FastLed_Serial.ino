@@ -1,7 +1,10 @@
 #include "FastLED.h"
 
 // How many leds in your strip?
-#define NUM_LEDS 8
+#define NUM_LEDS 12
+// Is your strip upside down?
+#define REVERSE 0
+#define MOD (REVERSE ? NUM_LEDS/2 : 0)
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
@@ -48,7 +51,6 @@ void setup() {
     FastLED.show();
     delay(100);
   }
-
 }
 
 void loop() {
@@ -56,11 +58,9 @@ void loop() {
   if (Serial.available() > 0 ) {
     Serial.println( Serial.available() );
 
-    int b1 = Serial.parseInt();
-    char m[5] = {0, 0, 0, 0, 0};
-    sprintf(m, "%d", b1);
+    char m[3] = {0, 0, 0};
+    Serial.readBytes(m, 3);
 
-    Serial.println(b1);
     Serial.println("====");
     Serial.println(m[0]);
     Serial.println(m[1]);
@@ -69,14 +69,13 @@ void loop() {
 
     if (Serial.read() == '\n') {
       for (int i = 0; i < NUM_LEDS; i++) {
-        leds1[i] = (i < m[0] - 48) ? COLOR_ON_1 : COLOR_OFF;
-        leds2[i] = (i < m[1] - 48) ? COLOR_ON_2 : COLOR_OFF;
-        leds3[i] = (i < m[2] - 48) ? COLOR_ON_3: COLOR_OFF;
+        int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
+        leds1[j] = (i < m[0] - (m[0] < 'a' ? 48 : 87)) ? COLOR_ON_1 : COLOR_OFF;
+        leds2[j] = (i < m[1] - (m[1] < 'a' ? 48 : 87)) ? COLOR_ON_2 : COLOR_OFF;
+        leds3[j] = (i < m[2] - (m[2] < 'a' ? 48 : 87)) ? COLOR_ON_3 : COLOR_OFF;
       }
     }
   }
-
   FastLED.show();
-
 }
 
