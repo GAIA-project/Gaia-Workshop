@@ -17,7 +17,7 @@ def connect():
 
 def write(a, b, c):
     global ser
-    text = "%d%d%d" % (a, b, c)
+    text = "%x%x%x" % (a, b, c)
     ser.write(text)
     ser.write("\n")
     time.sleep(0.2)
