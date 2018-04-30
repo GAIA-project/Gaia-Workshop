@@ -3,7 +3,7 @@
 // How many leds in your strip?
 #define NUM_LEDS 12
 // Is your strip upside down?
-#define REVERSE 0
+#define REVERSE 1
 #define MOD (REVERSE ? NUM_LEDS/2 : 0)
 
 // For led chips like Neopixels, which have a data line, ground, and power, you just
@@ -70,9 +70,9 @@ void loop() {
     if (Serial.read() == '\n') {
       for (int i = 0; i < NUM_LEDS; i++) {
         int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
-        leds1[j] = (i < m[0] - (m[0] < 'a' ? 48 : 87)) ? COLOR_ON_1 : COLOR_OFF;
-        leds2[j] = (i < m[1] - (m[1] < 'a' ? 48 : 87)) ? COLOR_ON_2 : COLOR_OFF;
-        leds3[j] = (i < m[2] - (m[2] < 'a' ? 48 : 87)) ? COLOR_ON_3 : COLOR_OFF;
+        leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF;
+        leds2[j] = (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_2 : COLOR_OFF;
+        leds3[j] = (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_3 : COLOR_OFF;
       }
     }
   }
