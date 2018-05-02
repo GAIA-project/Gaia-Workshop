@@ -18,15 +18,15 @@ import math
 import arduinoGauge
 import datetime
 exitapp = False
-timestamp=0
+timestamp = 0
 main_site = None
-sensorValues=[0,0,0]
+sensorValues = [0, 0, 0]
 
-#select pins for the leds
+# select pins for the leds
 pin1 = [2, 4]
 pin2 = [3, 5]
 
-#select colors for the rooms
+# select colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
@@ -34,8 +34,8 @@ B = [255, 0, 0]
 text = ""
 new_text = ""
 
-Button1=8
-Button2=7
+Button1 = 8
+Button2 = 7
 grovepi.pinMode(Button1, "INPUT")
 grovepi.pinMode(Button2, "INPUT")
 for i in [0, 1]:
@@ -43,30 +43,31 @@ for i in [0, 1]:
     grovepi.pinMode(pin2[i], "OUTPUT")
 
 
-
-#initiliaze the LCD screen color and value
-text=gaia_text.loading_data
+# initiliaze the LCD screen color and value
+text = gaia_text.loading_data
 setText(text)
 setRGB(60, 60, 60)
 
 
-def updateData(site,param):
+def updateData(site, param):
     global timestamp, maximum
-    resource=sparkworks.siteResource(site,param)	
+    resource = sparkworks.siteResource(site, param)
     summary = sparkworks.summary(resource)
     val = summary["minutes5"]
-    #print val
-    timestamp=summary["latestTime"]
+    # print val
+    timestamp = summary["latestTime"]
     return (val)
+
 
 def getSensorData(SensorName):
     global sensorValues
     if not exitapp:
-	for i in[0,1,2]:
-		val=updateData(rooms[i],SensorName)
-		sensorValues[i]=val
+        for i in[0, 1, 2]:
+            val = updateData(rooms[i], SensorName)
+            sensorValues[i] = val
 
-#Show the luminosity
+
+# Show the luminosity
 def showLuminosity(light_value, a, b):
     if (light_value < 200):
         # red LED
@@ -75,83 +76,82 @@ def showLuminosity(light_value, a, b):
     else:
         # blue LED
         grovepi.digitalWrite(a, 1)
-        grovepi.digitalWrite(b, 0)	
+        grovepi.digitalWrite(b, 0)
 
 
-
-#Print rooms
-print "όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένη αίθουσα:"
+# Print rooms
+print "Όνομα χρήστη:\n\t%s\n" % properties.username
+print "Επιλεγμένες αίθουσες:"
 for room in properties.the_rooms:
     print '\t%s' % room.decode('utf-8')
 print '\n'
 
 
-#total Power
+# total Power
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
-new_text="Click button to start!"
+new_text = "Click button to start!"
 
 
 def main():
-    	global text, new_text, timestamp, sensorValues	
-   	time.sleep(1)
-        t=0
-	new_t=0
-	rm=0
-	val=0	
-    	while not exitapp:
-		#detect Button that choose houre
-		try:
-        		if (grovepi.digitalRead(Button1)):
-		       		setText("New Houre")
-				t=t+1
-				if t==24:
-					setText("Take new data")
-					t=0
-	           		time.sleep(.4)
-    		except IOError:
-      			print "Button Error"
-		#Detect the button that choose room
-		try:
-                        if (grovepi.digitalRead(Button2)):
-                                rm=rm+1
-                                if rm>=2:
-                                        rm=0
-                                time.sleep(.4)
-                except IOError:
-                        print "Button Error"
+    global text, new_text, timestamp, sensorValues
+    time.sleep(1)
+    t = 0
+    new_t = 0
+    rm = 0
+    new_rm = 0
+    val = 0
+    while not exitapp:
+        # detect Button that choose houre
+        try:
+            if (grovepi.digitalRead(Button1)):
+                setText("New minute")
+                t = t + 1
+                if t == 24:
+                    setText("Loading new data")
+                    t = 0
+                time.sleep(.4)
+        except IOError:
+            print "Button Error"
 
+        # Detect the button that choose room
+        try:
+            if (grovepi.digitalRead(Button2)):
+                rm = rm + 1
+                if rm >= 2:
+                    rm = 0
+                time.sleep(.5)
+        except IOError:
+            print "Button Error"
 
+        if t == 0:
+            print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+            getSensorData("Luminosity")
+            new_text = "Loading data..."
+            setRGB(50, 50, 50)
+            t = 1
+        else:
+            if new_t != t:
+                new_t = t
+                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 300 * (t - 1))
+                strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+                print strtime
 
-		if t==0:
-			getSensorData("Luminosity")
-			new_text="Getting data..."
-			t=1
+            val = sensorValues[rm][new_t - 1]
+            showLuminosity(val, pin1[rm], pin2[rm])
+            new_text = strtime + ": " + str(float("{0:.2f}".format(val)))
+            setRGB(R[rm], G[rm], B[rm])
 
-		else:
-			if new_t != t:
-				new_t=t
-				timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-300*(t-1))
-				strtime=timevalue.strftime('%Y-%m-%d %H:%M:%S')
-				print strtime
- 		
-			val=sensorValues[rm][new_t-1]
-			showLuminosity(val,pin1[rm],pin2[rm])
-			new_text= strtime + ": " +  str(float("{0:.2f}".format(val))) 
-			setRGB(R[rm], G[rm], B[rm])
-
-
-		if text != new_text:
-			text = new_text
-			print "φωτεινότητα:",properties.the_rooms[rm], val
-			setText(text)
-
-
+        if (text != new_text) or (new_rm != rm):
+            text = new_text
+            new_rm = rm
+            print "Φωτεινότητα: ", properties.the_rooms[rm], val
+            # print "LCD show:", text
+            setText(text)
 
 
 try:
-    	main()
+    main()
 except KeyboardInterrupt:
-    	exitapp = True
-    	raise
+    exitapp = True
+    raise
