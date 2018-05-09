@@ -94,16 +94,8 @@ def siteResource(site, observedProperty):
 def siteResourceDevice(site, observedProperty):
     _resources = siteResources(site)
     for _resource in _resources:
-        if (_resource["uri"].startswith("00") is not 1)  and _resource["property"] == observedProperty:
-        #if _resource["uri"].startswith("00")   and _resource["property"] == observedProperty:
+        if (_resource["uri"].startswith("si") is not 1)  and _resource["property"] == observedProperty:
             return _resource
-
-def siteResourceDeviceRPi(site, observedProperty):
-    _resources = siteResources(site)
-    for _resource in _resources:
-        if _resource["uri"].startswith("gaia") and _resource["property"] == observedProperty:
-            return _resource
-
 
 
 def siteResources_all(site, observedProperty):
