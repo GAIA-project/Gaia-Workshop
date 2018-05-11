@@ -78,7 +78,7 @@ def mapDItoLED(di):
 	word="DPOSIA"
     if 15.0 < di < 19.9:
 	led=4
-	word="KANONINO"
+	word="KANONIKO"
     if 20.0 < di < 26.4:
 	led=5
 	word="ZESTH"

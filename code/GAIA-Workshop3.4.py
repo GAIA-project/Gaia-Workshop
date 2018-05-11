@@ -103,7 +103,7 @@ def getOutsideData():
 	api_key = "a96063dd6aacda945d68bb05209e848f"
 	current_time = datetime.datetime.now()
 	print "time:", current_time
-	forecast = forecastio.load_forecast(api_key, Patras[0], Patras[1], time=current_time)
+	forecast = forecastio.load_forecast(api_key, Athens[0], Athens[1], time=current_time)
 
 	byHour = forecast.hourly()
 	i=0
