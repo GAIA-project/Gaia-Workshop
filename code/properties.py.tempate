@@ -3,6 +3,7 @@ username = ""
 password = ""
 the_rooms = ["Room 1", "Room 2"]
 the_power_room=["Room 1", "Room 2"]
+GPSposition=[latitude,longitude]
 
 client_id = ""
 client_secret = ""

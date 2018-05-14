@@ -46,20 +46,6 @@ strdate=" "
 outTmp=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 outHum=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 
-patras= [38.246639,21.734573]
-athens=[37.97945,23.71622]
-lefkada=[38.7166638,20.6499974]
-kastoria=[40.5833,21.15]
-if properties.city=="Athens":
-	position=athens
-if properties.city=="Patras":
-	position=patras
-if properties.city=="Lefkada":
-	position=lefkada
-if properties.city=="Kastoria":
-	position=kastoria
-
-
 Button1=8
 Button2=7
 grovepi.pinMode(Button1, "INPUT")
@@ -113,7 +99,7 @@ def getOutsideData():
 	api_key = "a96063dd6aacda945d68bb05209e848f"
 	current_time = datetime.datetime.now()
 	print "time:", current_time
-	forecast = forecastio.load_forecast(api_key, position[0], position[1], time=current_time)
+	forecast = forecastio.load_forecast(api_key, properties.GPSposition[0], properties.GPSposition[1], time=current_time)
 
 	byHour = forecast.hourly()
 	i=0
