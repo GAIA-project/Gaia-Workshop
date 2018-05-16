@@ -17,6 +17,7 @@ import math
 
 import arduinoGauge
 import datetime
+
 exitapp = False
 timestamp = 0
 main_site = None

@@ -19,7 +19,7 @@ import arduinoGauge
 
 exitapp = False
 max_power = 0
-current=[0,0,0]
+current = [0, 0, 0]
 power_consumption = [0, 0, 0]
 maximum = [0, 0, 0, 0]
 main_site = None
@@ -37,8 +37,8 @@ setRGB(60, 60, 60)
 def updateData(resource):
     summary = sparkworks.summary(resource)
     global maximum
-    val = summary["latest"] 
-    val_max = max(summary["minutes5"]) 
+    val = summary["latest"]
+    val_max = max(summary["minutes5"])
     return (float("{0:.1f}".format(float(val))), float("{0:.1f}".format(float(val_max))))
 
 
@@ -46,11 +46,11 @@ def getData():
     global main_site, power_consumption, current
     # get per phase data
     for i in [0, 1, 2]:
-        if not exitapp:	
+        if not exitapp:
             data = updateData(phases[i])
-	    current[i]=data[0]/1000	
-            power_consumption[i] = (current[i]*230)
-            maximum[i] = data[1]*230/1000
+            current[i] = data[0] / 1000
+            power_consumption[i] = (current[i] * 230)
+            maximum[i] = data[1] * 230 / 1000
 
 
 def threaded_function(arg):
@@ -85,31 +85,31 @@ def map_value_to_leds(m, val, leds_available):
         return 0
     steap = m / leds_available
     mod = val / steap + 1
-  #  print "led number:"+str(math.floor(mod))+"Val"+str(val)	
+  #  print "led number:"+str(math.floor(mod))+"Val"+str(val)
     return math.floor(mod)
 
 
 def main():
     time.sleep(1)
-    led=[0,0,0]	
+    led = [0, 0, 0]
     while not exitapp:
-	
-		p=power_consumption[0]+power_consumption[1]+power_consumption[2]
-		basemax = max(maximum[0], maximum[1], maximum[2])
-		print "Maximum base:" + str(basemax)
-		for i in [0, 1, 2]:
-			print phases[i]["uri"], " Current: " + str(current[i]) +" Ampere  "+ "Power: "+ str(power_consumption[i]) + " Wat" 
-			led[i]=	map_value_to_leds(basemax, power_consumption[i], 7)
-			print led[i]
-		arduinoGauge.write(led[0],led[1],led[2])
-		time.sleep(0.5)
-		setText("Total Power:    " + str(p) + "       W")
-		setRGB(60, 60, 60)
-		time.sleep(10)
-		for i in [0, 1, 2]:
-			setText("Phase " + str(i + 1) + "         " + str(power_consumption[i]) + "      W")
-			setRGB(R[i], G[i], B[i])
-			time.sleep(5)
+
+        p = power_consumption[0] + power_consumption[1] + power_consumption[2]
+        basemax = max(maximum[0], maximum[1], maximum[2])
+        print "Maximum base:" + str(basemax)
+        for i in [0, 1, 2]:
+            print phases[i]["uri"], " Current: " + str(current[i]) + " Ampere  " + "Power: " + str(power_consumption[i]) + " Wat"
+            led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
+            print led[i]
+        arduinoGauge.write(led[0], led[1], led[2])
+        time.sleep(0.5)
+        setText("Total Power:    " + str(p) + "       W")
+        setRGB(60, 60, 60)
+        time.sleep(10)
+        for i in [0, 1, 2]:
+            setText("Phase " + str(i + 1) + "         " + str(power_consumption[i]) + "      W")
+            setRGB(R[i], G[i], B[i])
+            time.sleep(5)
 
 
 try:

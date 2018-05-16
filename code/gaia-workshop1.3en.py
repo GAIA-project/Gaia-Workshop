@@ -16,23 +16,23 @@ import grovepi
 from grove_rgb_lcd import *
 import threading
 
-#select pins for the leds
+# select pins for the leds
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
 
-#select colors for the rooms
+# select colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-#variables for the sensors
+# variables for the sensors
 luminosity = [0, 0, 0]
 temperature = [0, 0, 0]
 humidity = [0, 0, 0]
 noise = [0, 0, 0]
-swvalue=0
+swvalue = 0
 
-#Select the pins Outputs and inputs 
+# Select the pins Outputs and inputs
 Button = 8
 grovepi.pinMode(Button, "INPUT")
 Interruptor = 0
@@ -42,56 +42,62 @@ for i in [0, 1, 2]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
-#initiliaze global variables
-mode=0
-show=0
-set=0
+# initiliaze global variables
+mode = 0
+show = 0
+set = 0
 exitapp = False
 
-#Function that check the button
-def checkButton():
-	global show,change,set,exitapp, mode, Button
-	try:
-        	if (grovepi.digitalRead(Button)):
-			print "Pressing button..."
-			if show==1:
-            			show = 0
-			if set==5:
-				set=0
-			elif set==14:
-				set=0
-			else:
-				#print "Set", set
-            			set = set + 1
-			time.sleep(.3)
-    	except IOError:
-        	print "Button Error"
-#Function that check the switch position	
-def checkSwitch():
-	global show,mode,change,set,exitapp
-    	swvalue = grovepi.analogRead(0)
-	#print "SWvalue:",swvalue	
-	if swvalue < 500:
-       		 if mode == 1:
-            		print "Switch to mode 1"
-			set = 0
-        		mode = 0
-    	else:
-        	 if mode == 0:
-			print "Switch to mode 2"
-            		set = 0
-        		mode = 1
-	time.sleep(.3)
-	
+# Function that check the button
 
-#Take new values from the data base 
+
+def checkButton():
+    global show, change, set, exitapp, mode, Button
+    try:
+        if (grovepi.digitalRead(Button)):
+            print "Pressing button..."
+            if show == 1:
+                show = 0
+            if set == 5:
+                set = 0
+            elif set == 14:
+                set = 0
+            else:
+                # print "Set", set
+                set = set + 1
+            time.sleep(.3)
+    except IOError:
+        print "Button Error"
+# Function that check the switch position
+
+
+def checkSwitch():
+    global show, mode, change, set, exitapp
+    swvalue = grovepi.analogRead(0)
+    # print "SWvalue:",swvalue
+    if swvalue < 500:
+        if mode == 1:
+            print "Switch to mode 1"
+            set = 0
+            mode = 0
+    else:
+        if mode == 0:
+            print "Switch to mode 2"
+            set = 0
+            mode = 1
+    time.sleep(.3)
+
+
+# Take new values from the data base
 def updateSiteData(site, param):
     resource = sparkworks.siteResource(site, param)
     latest = sparkworks.latest(resource)
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
 
-#Get data from 
+# Get data from
+
+
 def getData():
     for i in [0, 1, 2]:
         if not exitapp:
@@ -141,7 +147,9 @@ time.sleep(1)
 text = ""
 new_text = ""
 
-# Find out the maximum value 
+# Find out the maximum value
+
+
 def maximum(v, sensor, unit):
     global new_text
     max_value = max(v[0], v[1], v[2])
@@ -157,7 +165,9 @@ def maximum(v, sensor, unit):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
 
-#Find out the minimum value
+# Find out the minimum value
+
+
 def minimum(v, sensor, unit):
     global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
@@ -173,14 +183,18 @@ def minimum(v, sensor, unit):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
 
-#Close all the leds
+# Close all the leds
+
+
 def closeAllLeds():
     global pin1, pin2
     for i in [0, 1, 2]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
-#Show the luminosity
+# Show the luminosity
+
+
 def showLuminosity(light_value, a, b):
     if (light_value < 200):
         # red LED
@@ -191,7 +205,9 @@ def showLuminosity(light_value, a, b):
         grovepi.digitalWrite(a, 1)
         grovepi.digitalWrite(b, 0)
 
-#Show the  temperature
+# Show the  temperature
+
+
 def showTemperature(temperature_value, a, b):
     if 18 < temperature_value < 25:
         # BLue LED
@@ -202,7 +218,9 @@ def showTemperature(temperature_value, a, b):
         grovepi.digitalWrite(a, 0)
         grovepi.digitalWrite(b, 1)
 
-#show the humidity
+# show the humidity
+
+
 def showHumidity(humidity_value, a, b):
     if 30 < humidity_value < 50:
         grovepi.digitalWrite(a, 1)
@@ -211,7 +229,9 @@ def showHumidity(humidity_value, a, b):
         grovepi.digitalWrite(a, 0)
         grovepi.digitalWrite(b, 1)
 
-#show the noise
+# show the noise
+
+
 def showNoise(noise_value, a, b):
     if noise_value < 50:
         grovepi.digitalWrite(a, 1)
@@ -220,38 +240,40 @@ def showNoise(noise_value, a, b):
         grovepi.digitalWrite(a, 0)
         grovepi.digitalWrite(b, 1)
 
-#close all the leds
+
+# close all the leds
 closeAllLeds()
+
 
 def loop():
     global new_text, change, show, set
-    show2 = 1  
-    #show=1
-    #set=0
-    #mode=0
-    #if (change or show):
+    show2 = 1
+    # show=1
+    # set=0
+    # mode=0
+    # if (change or show):
     if (show2):
-        #if change:
+        # if change:
             #change = 0
          #   show = 0
-	if set==0:
-	    #show=1
-	    #set=1 	
-	    if mode==0:
- 	        new_text = ("Mode1: Press the button to start")
-        	setRGB(50, 50, 50)
+        if set == 0:
+            # show=1
+            # set=1
+            if mode == 0:
+                new_text = ("Mode1: Press the button to start")
+                setRGB(50, 50, 50)
                 closeAllLeds()
-            if mode==1:
-		new_text = ("Mode2: Press the button to start")
- 	        setRGB(50, 50, 50)
-                closeAllLeds()	
+            if mode == 1:
+                new_text = ("Mode2: Press the button to start")
+                setRGB(50, 50, 50)
+                closeAllLeds()
         if set == 1:
             #new_text = ("Show Data excercise")
             #setRGB(50, 50, 50)
-            #time.sleep(1)
-	    show=0 	
+            # time.sleep(1)
+            show = 0
             if mode == 0:
-		set = 2
+                set = 2
             if mode == 1:
                 set = 7
         if set == 2:
@@ -319,7 +341,7 @@ def loop():
                 setRGB(60, 60, 60)
                 show = 1
       #  if set == 6:
-#	    set=1	
+#	    set=1
             #set = 0
  #           new_text = ("Press the button to start!")
   #          setRGB(60, 60, 60)
@@ -363,24 +385,25 @@ def loop():
             print "Minimum Noise", noise
             minimum(noise, "Noise", " dB")
             time.sleep(.1)
-        #if set == 15:
-	 #   set=1	
+        # if set == 15:
+         #   set=1
             #set = 0
           #  new_text = ("Press the button to start...")
            # setRGB(60, 60, 60)
 
 
 def main():
-    global text,new_text
-	
+    global text, new_text
+
     while not exitapp:
-	checkButton()
-	checkSwitch()	
+        checkButton()
+        checkSwitch()
         loop()
         if text != new_text:
             text = new_text
             print "settext", text
             setText(text)
+
 
 try:
     main()
