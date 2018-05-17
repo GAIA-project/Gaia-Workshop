@@ -111,20 +111,19 @@ def main():
         # detect Button that choose houre
         try:
             if (grovepi.digitalRead(ButtonH)):
-                setText("New Houre")
+                setText("New Hour")
                 t = t + 1
                 if t == 47:
                     setText("Take new data")
                     t = 0
                 time.sleep(.5)
-                print "houre" + str(t)
+                print "hour" + str(t)
         except IOError:
             print "Button Error"
         # detect button that choose phase
         try:
             if (grovepi.digitalRead(ButtonPh)):
                 setText("click...")
-
                 ph = ph + 1
                 if ph >= 4:
                     ph = 0
@@ -136,12 +135,11 @@ def main():
         # Show Total Power (dev=0)
         if t == 0:
             getData()
-
             basemax = max(maximum[0], maximum[1], maximum[2])
             new_text = "Getting data..."
             t = 1
-
         else:
+            # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
             if new_t != t:
                 new_t = t
                 p = power_consumption[0][t - 1] + power_consumption[1][t - 1] + power_consumption[2][t - 1]
@@ -164,6 +162,7 @@ def main():
             else:
                 new_text = "ph" + str(ph) + ":" + str(float("{0:.2f}".format(power_consumption[ph - 1][t - 1] * 230 / 1000))) + "W"
                 setRGB(R[ph - 1], G[ph - 1], B[ph - 1])
+            # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
         if text != new_text:
             text = new_text

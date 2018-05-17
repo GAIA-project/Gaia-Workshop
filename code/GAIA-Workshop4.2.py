@@ -74,7 +74,7 @@ arduinoGauge.write(1, 2, 3)
 
 #sparkworks.connect(properties.username, properties.password)
 # for room in properties.the_power_room:
-#	print '\t%s' % room.decode('utf-8')
+#    print '\t%s' % room.decode('utf-8')
 
 
 # total Power
@@ -154,7 +154,7 @@ def main():
                     led[i] = map_value_to_leds(basemax, power_consumption[i][t - 1] * 230 / 1000, 11)
                     print led[i]
                     time.sleep(.1)
-                    arduinoGauge.write(led[0], led[1], led[2])
+                arduinoGauge.write(led[0], led[1], led[2])
 
             if ph == 0:
                 new_text = strtime + ": " + str(float("{0:.2f}".format(p))) + "W"
