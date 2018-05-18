@@ -81,9 +81,9 @@ def getSensorData():
         for i in[0, 1, 2]:
             val = updateData(rooms[i], "Relative Humidity")
             humidity[i] = val
+
+
 # Find out the minimum value and show
-
-
 def minimum(v):
     min_value = min(v[0], v[1])
     # print min_value, v

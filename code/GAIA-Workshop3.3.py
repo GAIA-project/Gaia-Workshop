@@ -37,6 +37,7 @@ new_text = ""
 t = 0
 new_t = 0
 rm = 0
+rmchange = 0
 strtime = " "
 strdate = " "
 
@@ -115,12 +116,13 @@ setRGB(50, 50, 50)
 
 
 def loop():
-    global text, new_text, timestamp, t, rm, new_t, strtime, strdate
-    v = [0, 0]
+    global text, new_text, timestamp, t, rm, new_t, strtime, strdate,rmchange
+    tem = [0, 0]
+    hum = [0, 0]
     # detect Button that choose houre
     try:
         if (grovepi.digitalRead(Button1)):
-            print "on click1"
+            print "νέα ώρα"
             setText("New Houre")
             t = t + 1
             if t == 24:
@@ -132,7 +134,8 @@ def loop():
     # Detect the button that choose room
     try:
         if (grovepi.digitalRead(Button2)):
-            print "on click 2"
+            print "νέα τάξη"
+            rmchange = 1
             rm = rm + 1
             if rm >= 2:
                 rm = 0
@@ -147,24 +150,37 @@ def loop():
         setRGB(50, 50, 50)
         t = 1
     else:
-        if new_t != t:
+        if (new_t != t) or rmchange:
+            rmchange = 0
             new_t = t
             timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
             strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
             strtime = timevalue.strftime('%H:%M:%S')
-            print strdate
-        # showTemperature(temperature[rm][new_t-1],pin1[rm],pin2[rm])
-        new_text = strtime + " T:" + str("{0:.2f}".format(temperature[rm][new_t - 1])) + "oC; H:" + str("{0:.2f}".format(humidity[rm][new_t - 1])) + " %RH"
-        setRGB(R[rm], G[rm], B[rm])
-        v[0] = temperature[0][new_t - 1]
-        v[1] = temperature[1][new_t - 1]
-        minimum(v)
 
-    if text != new_text:
-        text = new_text
-        print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(temperature[rm][new_t - 1])
-        print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(humidity[rm][new_t - 1])
-        setText(text)
+            #Temperature at the time
+            #Temperature room Purple
+            tem[0] = temperature[0][new_t - 1]
+            #temperature room Orange
+            tem[1] = temperature[1][new_t - 1]
+
+            #Humidity at the time
+            #Humidity room Purple
+            hum[0] = humidity[0][new_t - 1]
+            #temperature room Orange
+            hum[1] = humidity[1][new_t - 1]
+
+            #Print at terminal
+            print strdate
+            print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
+            print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
+
+            #Print at LCD
+            new_text = strtime + " T:" + str("{0:.2f}".format(tem[rm])) + "oC; H:" + str("{0:.2f}".format(hum[rm])) + " %RH"
+            setRGB(R[rm], G[rm], B[rm])
+            setText(new_text)
+
+            #Show minimum temperature red at the leds
+            minimum(tem)
 
 
 def main():
