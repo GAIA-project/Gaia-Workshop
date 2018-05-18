@@ -81,11 +81,24 @@ def getSensorData():
         for i in[0, 1, 2]:
             val = updateData(rooms[i], "Relative Humidity")
             humidity[i] = val
+
+
 # Find out the minimum value and show
-
-
 def minimum(v):
     min_value = min(v[0], v[1])
+    # print min_value, v
+    for i in [0, 1]:
+        if v[i] == min_value:
+            grovepi.digitalWrite(pin1[i], 0)
+            grovepi.digitalWrite(pin2[i], 1)
+        else:
+            grovepi.digitalWrite(pin1[i], 1)
+            grovepi.digitalWrite(pin2[i], 0)
+
+
+# Find out maximum value and show
+def maximum(v):
+    min_value = max(v[0], v[1])
     # print min_value, v
     for i in [0, 1]:
         if v[i] == min_value:
@@ -141,7 +154,9 @@ setRGB(50, 50, 50)
 def loop():
     global text, new_text, timestamp, t, rm, new_t, strtime, strdate, outTem, outHum, rmchange
     tem = [0, 0]
+    difTem = [0, 0]
     hum = [0, 0]
+    difH = [0, 0]
     # detect Button that choose houre
     try:
         if (grovepi.digitalRead(Button1)):
@@ -198,8 +213,15 @@ def loop():
             # Humidity outside
             outH = outHum[new_t - 1]
 
-            # Show red the classroom with minimum temperature
-            minimum(tem)
+            # Calculate the absolute of the different
+            difTem[0] = abs(tem[0] - outT)
+            difTem[1] = abs(tem[1] - outT)
+
+            difH[0] = abs(hum[0] - outH)
+            difH[1] = abs(hum[1] - outH)
+            # Calculate and show the maximum different on Red at the leds
+
+            maximum(difTem)
 
             # print at terminal
             print strdate
@@ -208,8 +230,11 @@ def loop():
             print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
             print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
 
+            print "διαφορά θερμοκρασίας:", "{0:.2f}".format(difTem[rm])
+            print "διαφορά υγρασία:", "{0:.2f}".format(difH[rm])
+
             # Select text for LCD
-            new_text = "Ti:" + "{0:.2f}".format(tem[rm]) + "To:" + str(outT) + "Hi:" + "{0:.2f}".format(hum[rm]) + "%RH Ho:" + str(outH)
+            new_text = "Diff Tem:" + "{0:.2f}".format(difTem[rm]) + "   Diff Hum:" + "{0:.2f}".format(difH[rm])
             # Select colour of the specific room for the LCD
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
