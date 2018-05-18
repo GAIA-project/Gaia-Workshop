@@ -207,7 +207,7 @@ def loop():
             #DI for room Purlple
             DI[0] = calDI(tem[0], hum[0])
             #DI for room Orange
-            DI[1] = calDI(tem[0], hum[0])
+            DI[1] = calDI(tem[1], hum[1])
 
             #Calculate the Number of leds open at Purple room
             val = mapDItoLED(DI[0])
