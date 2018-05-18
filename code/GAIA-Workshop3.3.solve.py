@@ -200,11 +200,6 @@ def loop():
             #temperature room Orange
             hum[1] = humidity[1][new_t - 1]
 
-            #Print at terminal
-            print strdate
-            print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
-            print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
-
             # Calculate DI
             DI = [0, 0]
             led = [0, 0]
@@ -222,6 +217,12 @@ def loop():
             val = mapDItoLED(DI[1])
             led[1] = val[0]
             word[1] = val[1]
+
+            #Print at terminal
+            print strdate
+            print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
+            print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
+            print "DI:", properties.the_rooms[rm], "{0:.2f}".format(DI[rm]), word[rm]
 
             # Print DI at LCD
             new_text = (strtime + "DI:" +"{0:.2f}".format(DI[rm]) + "oC " + word[rm])
