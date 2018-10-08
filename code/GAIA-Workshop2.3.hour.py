@@ -103,28 +103,7 @@ def main():
     new_rm = 0
     val = 0
     while not exitapp:
-        # detect Button that choose houre
-        try:
-            if (grovepi.digitalRead(Button1)):
-                setText("New hour")
-                t = t + 1
-                if t == 24:
-                    setText("Loading new data")
-                    t = 0
-                time.sleep(.4)
-        except IOError:
-            print "Button Error"
-
-        # Detect the button that choose room
-        try:
-            if (grovepi.digitalRead(Button2)):
-                rm = rm + 1
-                if rm >= 2:
-                    rm = 0
-                time.sleep(.5)
-        except IOError:
-            print "Button Error"
-
+        # Initialize
         if t == 0:
             print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
             getSensorData("Luminosity")
@@ -142,13 +121,33 @@ def main():
             showLuminosity(val, pin1[rm], pin2[rm])
             new_text = strtime + ": " + str(float("{0:.2f}".format(val)))
             setRGB(R[rm], G[rm], B[rm])
-
+        # Update LCD and Terminal display
         if (text != new_text) or (new_rm != rm):
             text = new_text
             new_rm = rm
             print "Φωτεινότητα: ", properties.the_rooms[rm], val
             # print "LCD show:", text
             setText(text)
+        # Detect the button that changes the hour
+        try:
+            if (grovepi.digitalRead(Button1)):
+                setText("New hour")
+                t = t + 1
+                if t == 24:
+                    setText("Loading new data")
+                    t = 0
+                time.sleep(.4)
+        except IOError:
+            print "Button Error"
+        # Detect the button that changes the room
+        try:
+            if (grovepi.digitalRead(Button2)):
+                rm = rm + 1
+                if rm >= 2:
+                    rm = 0
+                time.sleep(.5)
+        except IOError:
+            print "Button Error"
 
 
 try:
