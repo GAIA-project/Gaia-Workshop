@@ -122,6 +122,7 @@ def closeAllLeds():
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
+
 closeAllLeds()
 # Print rooms
 print "όνομα χρήστη:\n\t%s\n" % properties.username
@@ -218,6 +219,7 @@ def loop():
 def main():
     while not exitapp:
         loop()
+
 
 try:
     main()

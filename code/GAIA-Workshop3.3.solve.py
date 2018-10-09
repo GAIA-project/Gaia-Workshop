@@ -146,9 +146,9 @@ setRGB(50, 50, 50)
 
 
 def loop():
-    global text, new_text, timestamp, t, rm, new_t, strtime, strdate,rmchange
-    tem=[0,0]
-    hum=[0,0]
+    global text, new_text, timestamp, t, rm, new_t, strtime, strdate, rmchange
+    tem = [0, 0]
+    hum = [0, 0]
     # detect Button that choose houre
     try:
         if (grovepi.digitalRead(Button1)):
@@ -164,7 +164,7 @@ def loop():
     # Detect the button that choose room
     try:
         if (grovepi.digitalRead(Button2)):
-            print  "νέα τάξη"
+            print "νέα τάξη"
             rmchange = 1
             rm = rm + 1
             if rm >= 2:
@@ -187,52 +187,50 @@ def loop():
             timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
             strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
             strtime = timevalue.strftime('%H:%M:%S')
-            
-            #Temperature at the time
-            #Temperature room Purple
+
+            # Temperature at the time
+            # Temperature room Purple
             tem[0] = temperature[0][new_t - 1]
-            #temperature room Orange
+            # Temperature room Orange
             tem[1] = temperature[1][new_t - 1]
 
-            #Humidity at the time
-            #Humidity room Purple
+            # Humidity at the time
+            # Humidity room Purple
             hum[0] = humidity[0][new_t - 1]
-            #temperature room Orange
+            # temperature room Orange
             hum[1] = humidity[1][new_t - 1]
 
             # Calculate DI
             DI = [0, 0]
             led = [0, 0]
             word = [" ", " ", " "]
-            #DI for room Purlple
+            # DI for room Purple
             DI[0] = calDI(tem[0], hum[0])
-            #DI for room Orange
+            # DI for room Orange
             DI[1] = calDI(tem[1], hum[1])
 
-            #Calculate the Number of leds open at Purple room
+            # Calculate the Number of leds open at Purple room
             val = mapDItoLED(DI[0])
-            led[0]=val[0]
-            word[0]=val[1]
-            #Calculate the number od leds open at Orange room
+            led[0] = val[0]
+            word[0] = val[1]
+            # Calculate the number od leds open at Orange room
             val = mapDItoLED(DI[1])
             led[1] = val[0]
             word[1] = val[1]
 
-            #Print at terminal
+            # Print to terminal
             print strdate
             print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
             print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
             print "DI:", properties.the_rooms[rm], "{0:.2f}".format(DI[rm]), word[rm]
 
-            # Print DI at LCD
-            new_text = (strtime + "DI:" +"{0:.2f}".format(DI[rm]) + "oC " + word[rm])
+            # Print DI to LCD
+            new_text = (strtime + "DI:" + "{0:.2f}".format(DI[rm]) + "oC " + word[rm])
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
 
             # Show minimum DI on the Leds
             minimum(DI)
-
-
 
 
 def main():

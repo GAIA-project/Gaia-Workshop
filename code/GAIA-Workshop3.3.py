@@ -116,7 +116,7 @@ setRGB(50, 50, 50)
 
 
 def loop():
-    global text, new_text, timestamp, t, rm, new_t, strtime, strdate,rmchange
+    global text, new_text, timestamp, t, rm, new_t, strtime, strdate, rmchange
     tem = [0, 0]
     hum = [0, 0]
     # detect Button that choose houre
@@ -157,29 +157,29 @@ def loop():
             strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
             strtime = timevalue.strftime('%H:%M:%S')
 
-            #Temperature at the time
-            #Temperature room Purple
+            # Temperature at the time
+            # Temperature room Purple
             tem[0] = temperature[0][new_t - 1]
-            #temperature room Orange
+            # Temperature room Orange
             tem[1] = temperature[1][new_t - 1]
 
-            #Humidity at the time
-            #Humidity room Purple
+            # Humidity at the time
+            # Humidity room Purple
             hum[0] = humidity[0][new_t - 1]
-            #temperature room Orange
+            # Temperature room Orange
             hum[1] = humidity[1][new_t - 1]
 
-            #Print at terminal
+            # Print to terminal
             print strdate
             print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
             print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
 
-            #Print at LCD
+            # Print to LCD
             new_text = strtime + " T:" + str("{0:.2f}".format(tem[rm])) + "oC; H:" + str("{0:.2f}".format(hum[rm])) + " %RH"
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
 
-            #Show minimum temperature red at the leds
+            # Show minimum temperature red at the leds
             minimum(tem)
 
 
