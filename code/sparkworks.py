@@ -3,6 +3,8 @@ import requests
 import os
 import sys
 
+import pprint
+
 sys.path.append(os.getcwd())
 import properties
 
@@ -73,7 +75,7 @@ def select_rooms(room_names):
         for site in sites():
             if site["name"].encode('utf-8') in room_name:
                 _rooms.append(site)
-		break
+        break
     return _rooms
 
 
@@ -86,10 +88,10 @@ def siteResources(site):
 
 def siteResource(site, observedProperty):
     _resources = siteResources(site)
-    #print _resources
     for _resource in _resources:
         if _resource["uri"].startswith("site-") and _resource["property"] == observedProperty:
             return _resource
+
 
 def siteResourceDevice(site, observedProperty):
     _resources = siteResources(site)
@@ -103,15 +105,16 @@ def siteResources_all(site, observedProperty):
     _resources = siteResources(site)
     for _resource in _resources:
         if observedProperty in _resource["property"]:
-            	_selected_resources.append(_resource)
+            _selected_resources.append(_resource)
     return _selected_resources
+
 
 def siteResources_all_exact(site, observedProperty):
     _selected_resources = []
     _resources = siteResources(site)
     for _resource in _resources:
         if observedProperty == _resource["property"]:
-            	_selected_resources.append(_resource)
+            _selected_resources.append(_resource)
     return _selected_resources
 
 
@@ -134,7 +137,7 @@ def current_phases(site):
     _phases = {}
     _uris = []
 
-    _resources = siteResources_all(site, "Electrical Current")
+    _resources = siteResources_all_exact(site, "Electrical Current")
     for _resource in _resources:
         if not _resource["uri"].startswith("site-"):
             _phases[_resource["uri"]] = _resource
@@ -151,11 +154,13 @@ def total_power(site):
         if _resource["uri"].startswith("site-"):
             return _resource
 
+
 def total_site(site,name):
     _resources = siteResources_all_exact(site, name)
     for _resource in _resources:
         if _resource["uri"].startswith("site-"):
             return _resource
+
 
 def latest(resource):
     response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/latest')
