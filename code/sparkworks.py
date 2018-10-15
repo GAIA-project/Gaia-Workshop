@@ -75,7 +75,7 @@ def select_rooms(room_names):
         for site in sites():
             if site["name"].encode('utf-8') in room_name:
                 _rooms.append(site)
-        break
+                break
     return _rooms
 
 
