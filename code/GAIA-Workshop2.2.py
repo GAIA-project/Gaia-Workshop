@@ -61,16 +61,16 @@ def threaded_function(arg):
 
 
 # Print rooms
-print "Όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένες αίθουσες:"
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένες αίθουσες:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print("\t%s" % room.decode('utf-8'))
+print("\n")
 
 sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
 
-print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
 setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
 getData()
@@ -78,16 +78,14 @@ getData()
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
 
-
 text = ""
 new_text = ""
-
 
 # Find out the maximum value
 def maximum(v, sensor, unit):
     global new_text
     max_value = max(v[0], v[1], v[2])
-    print str(max_value) + "\t\t\t" + str(v)
+    print(str(max_value) + "\t\t\t" + str(v))
     # print(gaia_text.max_message % (sensor, max_value, unit))
     new_text = (gaia_text.max_message % (sensor, max_value, unit))
     setRGB(60, 60, 60)
@@ -104,7 +102,7 @@ def maximum(v, sensor, unit):
 def minimum(v, sensor, unit):
     global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
-    print str(min_value) + "\t\t\t" + str(v)
+    print(str(min_value) + "\t\t\t" + str(v))
     # print(gaia_text.min_message % (sensor, min_value, unit))
     new_text = (gaia_text.min_message % (sensor, min_value, unit))
     setRGB(60, 60, 60)
@@ -142,7 +140,7 @@ def checkButton():
     global set, exitapp, mode
     try:
         if (grovepi.digitalRead(Button)):
-            print "Πιέσατε το κουμπί."
+            print("Πιέσατε το κουμπί.")
             if (set < 4):
                 set = set + 1
             else:
@@ -150,7 +148,7 @@ def checkButton():
             time.sleep(.5)
 
     except IOError:
-        print "Button Error"
+        print("Button Error")
 
 
 # close all the leds
@@ -161,20 +159,19 @@ def loop():
     global new_text, change, show, set
     if set <= 2:
         showLuminosity(luminosity[set], pin1[set], pin2[set])
-        print "Φωτεινότητα: ", properties.the_rooms[set]
-        print str(luminosity[set])
+        print("Φωτεινότητα: %s" % properties.the_rooms[set])
+        print(str(luminosity[set]))
         new_text = ("Light:" + str(luminosity[set]))
         setRGB(R[set], G[set], B[set])
         time.sleep(.1)
-
     if set == 3:
         # maximum light
-        print "Μέγιστη φωτεινότητα\t[μωβ, πορτοκαλί, πράσινο]"
+        print("Μέγιστη φωτεινότητα\t[μωβ, πορτοκαλί, πράσινο]")
         maximum(luminosity, "Luminosity", " ")
         time.sleep(.1)
     if set == 4:
         # minimum light
-        print "Ελάχιστη φωτεινότητα\t[μωβ, πορτοκαλί, πράσινο]"
+        print("Ελάχιστη φωτεινότητα\t[μωβ, πορτοκαλί, πράσινο]")
         minimum(luminosity, "Luminosity", " ")
         time.sleep(.1)
 
@@ -187,7 +184,7 @@ def main():
         loop()
         if text != new_text:
             text = new_text
-            print "Μήνυμα LCD: ", text
+            print("Μήνυμα LCD: %s" % text)
             setText(text)
 
 
