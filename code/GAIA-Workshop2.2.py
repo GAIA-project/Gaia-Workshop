@@ -127,6 +127,7 @@ def closeAllLeds():
 
 # Show the luminosity
 def showLuminosity(light_value, a, b):
+    closeAllLeds()
     if (light_value < 200):
         # red LED
         grovepi.digitalWrite(a, 0)

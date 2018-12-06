@@ -98,30 +98,29 @@ new_text = "Click button to start!"
 def main():
     global text, new_text, timestamp, sensorValues
     time.sleep(1)
-    t = 0
+    t = 1
     new_t = 0
     rm = 0
     new_rm = 0
     val = 0
+    
+    print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+    getSensorData("Luminosity")
+    new_text = "Loading data..."
+    setRGB(50, 50, 50)
+    
     while not exitapp:
         # Initialize
-        if t == 0:
-            print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
-            getSensorData("Luminosity")
-            new_text = "Loading data..."
-            setRGB(50, 50, 50)
-            t = 1
-        else:
-            if new_t != t:
-                new_t = t
-                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-                strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-                print strtime
+        if new_t != t:
+            new_t = t
+            timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
+            strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+            print strtime
 
-            val = sensorValues[rm][new_t - 1]
-            showLuminosity(val, pin1[rm], pin2[rm])
-            new_text = strtime + ": " + str(float("{0:.2f}".format(val)))
-            setRGB(R[rm], G[rm], B[rm])
+        val = sensorValues[rm][new_t - 1]
+        showLuminosity(val, pin1[rm], pin2[rm])
+        new_text = strtime + ": " + str(float("{0:.2f}".format(val)))
+        setRGB(R[rm], G[rm], B[rm])
         # Update LCD and Terminal display
         if (text != new_text) or (new_rm != rm):
             text = new_text
@@ -134,8 +133,8 @@ def main():
             if (grovepi.digitalRead(Button1)):
                 setText("New hour")
                 t = t + 1
-                if t == 24:
-                    setText("Loading new data")
+                if t == 48:
+                    setText("Continuing from the beggining")
                     t = 0
                 time.sleep(.4)
         except IOError:
