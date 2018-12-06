@@ -4,6 +4,7 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 
 from threading import Thread
 import time

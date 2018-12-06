@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
-import requests
 import os
 import sys
-
-import pprint
-
+import requests
+import datetime
 sys.path.append(os.getcwd())
 import properties
 
@@ -17,8 +15,8 @@ token = {}
 usernm = ""
 passwd = ""
 
-the_sites = []
-the_site_resources = {}
+_selected_sites = []
+_selected_site_resources = {}
 
 
 def connect(username, password):
@@ -39,16 +37,18 @@ def getToken(username, password):
 def sites():
     global token, the_sites
     response = apiGetAuthorized('/v1/location/site')
-    the_sites = response.json()["sites"]
-    for site in the_sites:
+    _sites = response.json()["sites"]
+    for site in _sites:
         isReuse = False
         for user in site['sharedUsers']:
-            if user['username'] == usernm and user['reusePermission']:
-                    isReuse = True
+            if (user['username'] == usernm) and (user['reusePermission'] is True):
+                isReuse = True
         if isReuse:
             for subsite in site['subsites']:
-                    the_sites.append(subsite)
-    return the_sites
+                for user in subsite['sharedUsers']:
+                    if user['username'] == usernm and user['reusePermission'] is True:
+                        _selected_sites.append(subsite)
+    return _selected_sites
 
 
 def main_site():
@@ -61,7 +61,8 @@ def main_site():
 
 def rooms():
     _rooms = []
-    for site in sites():
+    _sites = sites()
+    for site in _sites:
         if len(site["subsites"]) != 0:
             pass
         else:
@@ -69,21 +70,22 @@ def rooms():
     return _rooms
 
 
-def select_rooms(room_names):
+def select_rooms(names):
     _rooms = []
-    for room_name in room_names:
-        for site in sites():
-            if site["name"].encode('utf-8') in room_name:
+    _sites = sites()
+    for name in names:
+        for site in _sites:
+            if site["name"].encode('utf-8').strip() == name.strip():
                 _rooms.append(site)
                 break
     return _rooms
 
 
 def siteResources(site):
-    if site["id"] not in the_site_resources:
+    if site["id"] not in _selected_site_resources:
         response = apiGetAuthorized("/v1/location/site/" + str(site["id"]) + "/resource")
-        the_site_resources[site["id"]] = response.json()["resources"]
-    return the_site_resources[site["id"]]
+        _selected_site_resources[site["id"]] = response.json()["resources"]
+    return _selected_site_resources[site["id"]]
 
 
 def siteResource(site, observedProperty):
@@ -96,7 +98,7 @@ def siteResource(site, observedProperty):
 def siteResourceDevice(site, observedProperty):
     _resources = siteResources(site)
     for _resource in _resources:
-        if (_resource["uri"].startswith("si") is not 1)  and _resource["property"] == observedProperty:
+        if _resource["uri"].startswith("site-") is False and _resource["property"] == observedProperty:
             return _resource
 
 
@@ -163,8 +165,9 @@ def total_site(site,name):
 
 
 def latest(resource):
-    response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/latest')
-    return response.json()
+    response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/latest').json()
+    print("Device: " + response['uri'] + " Time: " + datetime.datetime.fromtimestamp((response['latestTime'] / 1000.0)).strftime('%Y-%m-%d %H:%M:%S'))
+    return response
 
 
 def summary(resource):

@@ -4,6 +4,7 @@ import os
 import sys
 
 sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 
 from threading import Thread
 import time
@@ -102,20 +103,19 @@ def main():
     rm = 0
     new_rm = 0
     val = 0
+
+    print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+    getSensorData("Luminosity")
+    new_text = "Loading data..."
+    setRGB(50, 50, 50)
+
     while not exitapp:
         # Initialize
-        if t == 0:
-            print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
-            getSensorData("Luminosity")
-            new_text = "Loading data..."
-            setRGB(50, 50, 50)
-            t = 1
-        else:
-            if new_t != t:
-                new_t = t
-                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 300 * (t - 1))
-                strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-                print strtime
+        if new_t != t:
+            new_t = t
+            timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 300 * (t - 1))
+            strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+            print strtime
 
             val = sensorValues[rm][new_t - 1]
             showLuminosity(val, pin1[rm], pin2[rm])
@@ -133,7 +133,7 @@ def main():
             if (grovepi.digitalRead(Button1)):
                 setText("New minute")
                 t = t + 1
-                if t == 24:
+                if t == 47:
                     setText("Loading new data")
                     t = 0
                 time.sleep(.4)
