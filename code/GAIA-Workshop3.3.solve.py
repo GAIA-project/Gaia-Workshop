@@ -145,6 +145,9 @@ new_text = "Click button to start!"
 setRGB(50, 50, 50)
 
 
+arduinoGauge.connect()
+arduinoGauge.write(1, 1, 1)
+
 def loop():
     global text, new_text, timestamp, t, rm, new_t, strtime, strdate, rmchange
     tem = [0, 0]
@@ -209,6 +212,7 @@ def loop():
             # DI for room Orange
             DI[1] = calDI(tem[1], hum[1])
 
+	    	
             # Calculate the Number of leds open at Purple room
             val = mapDItoLED(DI[0])
             led[0] = val[0]
@@ -228,7 +232,9 @@ def loop():
             new_text = (strtime + "DI:" + "{0:.2f}".format(DI[rm]) + "oC " + word[rm])
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
-
+	
+	     
+	    arduinoGauge.write(led[0], led[1], 0)	
             # Show minimum DI on the Leds
             minimum(DI)
 
