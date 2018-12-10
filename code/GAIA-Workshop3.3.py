@@ -101,11 +101,11 @@ def closeAllLeds():
 
 closeAllLeds()
 # Print rooms
-print "όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένη αίθουσα:"
+print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print('\t%s' % room.decode('utf-8'))
+print('\n')
 
 
 # total Power
@@ -122,29 +122,29 @@ def loop():
     # detect Button that choose houre
     try:
         if (grovepi.digitalRead(Button1)):
-            print "νέα ώρα"
-            setText("New Houre")
+            print("νέα ώρα")
+            setText("New Hour")
             t = t + 1
             if t == 24:
                 setText("Take new data")
                 t = 0
             time.sleep(1)
     except IOError:
-        print "Button Error"
+        print("Button Error")
     # Detect the button that choose room
     try:
         if (grovepi.digitalRead(Button2)):
-            print "νέα τάξη"
+            print("νέα τάξη")
             rmchange = 1
             rm = rm + 1
             if rm >= 2:
                 rm = 0
             time.sleep(1)
     except IOError:
-        print "Button Error"
+        print("Button Error")
 
     if t == 0:
-        print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+        print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         getSensorData()
         new_text = "Getting data..."
         setRGB(50, 50, 50)
@@ -155,7 +155,7 @@ def loop():
             new_t = t
             timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
             strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-            strtime = timevalue.strftime('%H:%M:%S')
+            strtime = timevalue.strftime('%H:%M')
 
             # Temperature at the time
             # Temperature room Purple
@@ -170,12 +170,12 @@ def loop():
             hum[1] = humidity[1][new_t - 1]
 
             # Print to terminal
-            print strdate
-            print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
-            print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
+            print(strdate)
+            print(properties.the_rooms[rm] + " θερμοκρασία: {0:.1f}".format(tem[rm]))
+            print(properties.the_rooms[rm] + " υγρασία: {0:.1f}".format(hum[rm]))
 
             # Print to LCD
-            new_text = strtime + " T:" + str("{0:.2f}".format(tem[rm])) + "oC; H:" + str("{0:.2f}".format(hum[rm])) + " %RH"
+            new_text = strtime + "T:{0:.1f} oC".format(tem[rm]).rjust(16 - len(strtime)) + "H:{0:.1f}%RH".format(hum[rm]).rjust(16)
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
 

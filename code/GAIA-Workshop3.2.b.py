@@ -110,7 +110,7 @@ def checkButton():
     global set, exitapp, mode
     try:
         if (grovepi.digitalRead(Button)):
-            print "έχετε πιέσει το κουμπί"
+            print("έχετε πιέσει το κουμπί")
             if (set < 2):
                 set = set + 1
             else:
@@ -118,7 +118,7 @@ def checkButton():
             time.sleep(.5)
 
     except IOError:
-        print "Button Error"
+        print("Button Error")
 
 
 def calDI(t, rh):
@@ -126,17 +126,17 @@ def calDI(t, rh):
     return float("{0:.2f}".format(float(DI)))
 
 
-print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
 setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
 arduinoGauge.connect()
 arduinoGauge.write(1, 1, 1)
 
-print "όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένη αίθουσα:"
+print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print('\t%s' % room.decode('utf-8'))
+print('\n')
 
 
 sparkworks.connect(properties.username, properties.password)
@@ -165,13 +165,13 @@ def loop():
         word[i] = m[1]
 
     arduinoGauge.write(led[0], led[1], led[2])
-    new_text = (" DI = " + str(DI[set]) + "     " + word[set])
+    new_text = ("DI: " + str(DI[set]) + "\n" + word[set])
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)
     if text != new_text:
-        print "θερμοκρασία ", properties.the_rooms[set], ": ", temperature[set], "  Centrigrade"
-        print "υγρασία", properties.the_rooms[set], ": ", humidity[set], " %RH"
-        print "DI", properties.the_rooms[set], ": ", DI[set], word[set]
+        print(properties.the_rooms[set] + " θερμοκρασία: " + str(temperature[set]) + " Centrigrade")
+        print(properties.the_rooms[set] + " υγρασία: " + str(humidity[set]) + " %RH")
+        print(properties.the_rooms[set] + " DI: " + str(DI[set]) + " " + word[set])
         text = new_text
         setText(text)
 

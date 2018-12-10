@@ -114,7 +114,7 @@ def getOutsideData():
     # Outside weather necessary variables
     api_key = "a96063dd6aacda945d68bb05209e848f"
     current_time = datetime.datetime.now()
-    print "time:", current_time
+    print("time: " + str(current_time))
     forecast = forecastio.load_forecast(api_key, properties.GPSposition[0], properties.GPSposition[1], time=current_time)
 
     byHour = forecast.hourly()
@@ -138,11 +138,11 @@ def closeAllLeds():
 
 closeAllLeds()
 # Print rooms
-print "όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένη αίθουσα:"
+print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print('\t%s' % room.decode('utf-8'))
+print('\n')
 
 
 # total Power
@@ -161,29 +161,29 @@ def loop():
     # detect Button that choose houre
     try:
         if (grovepi.digitalRead(Button1)):
-            print "Νέα ώρα"
-            setText("New Houre")
+            print("Νέα ώρα")
+            setText("New Hour")
             t = t + 1
             if t == 15:
                 setText("Take new data")
                 t = 0
             time.sleep(1)
     except IOError:
-        print "Button Error"
+        print("Button Error")
     # Detect the button that choose room
     try:
         if (grovepi.digitalRead(Button2)):
-            print "Νέα τάξη"
+            print("Νέα τάξη")
             rmchange = 1
             rm = rm + 1
             if rm >= 2:
                 rm = 0
             time.sleep(1)
     except IOError:
-        print "Button Error"
+        print("Button Error")
 
     if t == 0:
-        print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+        print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         getSensorData()
         getOutsideData()
         new_text = "Getting data..."
@@ -225,17 +225,17 @@ def loop():
             maximum(difTem)
 
             # print at terminal
-            print strdate
-            print "εξωτερική θερμοκρασία:", outT
-            print "εξωτερική υγρασία:", outH
-            print "θερμοκρασία:", properties.the_rooms[rm], "{0:.2f}".format(tem[rm])
-            print "υγρασία:", properties.the_rooms[rm], "{0:.2f}".format(hum[rm])
+            print(strdate)
+            print("εξωτερική θερμοκρασία:" + str(outT))
+            print("εξωτερική υγρασία:" + str(outH))
+            print(properties.the_rooms[rm] + " θερμοκρασία: {0:.1f}".format(tem[rm]))
+            print(properties.the_rooms[rm] + " υγρασία: {0:.1f}".format(hum[rm]))
 
-            print "διαφορά θερμοκρασίας:", "{0:.2f}".format(difTem[rm])
-            print "διαφορά υγρασία:", "{0:.2f}".format(difH[rm])
+            print("διαφορά θερμοκρασίας: {0:.1f}".format(difTem[rm]))
+            print("διαφορά υγρασία: {0:.1f}".format(difH[rm]))
 
             # Select text for LCD
-            new_text = "Diff Tem:" + "{0:.2f}".format(difTem[rm]) + "   Diff Hum:" + "{0:.2f}".format(difH[rm])
+            new_text = "Diff Temp:{0:.1f}".format(difTem[rm]).rjust(16) + "Diff Humi:{0:.1f}".format(difH[rm]).rjust(16)
             # Select colour of the specific room for the LCD
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)

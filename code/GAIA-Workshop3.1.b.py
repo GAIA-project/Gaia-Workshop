@@ -92,7 +92,7 @@ def checkButton():
     global set, exitapp, mode
     try:
         if (grovepi.digitalRead(Button)):
-            print "έχετε πιέσει το κουμπί"
+            print("έχετε πιέσει το κουμπί")
             if (set == 0):
                 set = 1
             else:
@@ -100,14 +100,14 @@ def checkButton():
             time.sleep(.5)
 
     except IOError:
-        print "Button Error"
+        print("Button Error")
 
 
 # Find out the maximum value
 def maximum(v, sensor, unit):
     global new_text
     max_value = max(v[0], v[1], v[2])
-    print max_value, v
+    print(max_value, v)
     #print(gaia_text.max_message % (sensor, max_value, unit))
     new_text = (gaia_text.max_message % (sensor, max_value, unit))
     setRGB(60, 60, 60)
@@ -124,7 +124,7 @@ def maximum(v, sensor, unit):
 def minimum(v, sensor, unit):
     global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
-    print min_value, v
+    print(min_value, v)
     #print(gaia_text.min_message % (sensor, min_value, unit))
     new_text = (gaia_text.min_message % (sensor, min_value, unit))
     setRGB(60, 60, 60)
@@ -157,11 +157,11 @@ def closeAllLeds():
 
 closeAllLeds()
 # Print rooms
-print "όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένη αίθουσα:"
+print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print('\t%s' % room.decode('utf-8'))
+print('\n')
 
 
 # total Power
@@ -176,32 +176,32 @@ def loop():
     global new_text, temperature, humidity, set
 
     # get data
-    print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     setText(gaia_text.loading_data)
     setRGB(50, 50, 50)
     getData()
 
     # minimum temperature
-    print "ελάχιστο θερμοκρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]"
+    print("ελάχιστη θερμοκρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]")
     minimum(temperature, "Temperature", "oC ")
     setText(new_text)
     breakSleep(set)
 
     for i in [0, 1, 2]:
-        print "θερμοκρασία μέσος όρος :", properties.the_rooms[i], ": ", temperature[i], " oC"
+        print("θερμοκρασία μέσος όρος: " + properties.the_rooms[i] + ": " + str(temperature[i]) + " oC")
         new_text = ("Avg Temperature:" + str(temperature[i]) + " oC")
         setText(new_text)
         setRGB(R[i], G[i], B[i])
         breakSleep(set)
 
     # maximum humidity
-    print "μέγιστη υγρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]"
+    print("μέγιστη υγρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]")
     maximum(humidity, "Humidity", "%RH")
     setText(new_text)
     breakSleep(set)
 
     for i in [0, 1, 2]:
-        print "υγρασία μέσος όρος:", properties.the_rooms[i], ":", humidity[i], " %RH"
+        print("υγρασία μέσος όρος: " + properties.the_rooms[i] + ": " + str(humidity[i]) + " %RH")
         new_text = ("Avg Humidity:   " + str(humidity[i]) + " %RH")
         setText(new_text)
         setRGB(R[i], G[i], B[i])
