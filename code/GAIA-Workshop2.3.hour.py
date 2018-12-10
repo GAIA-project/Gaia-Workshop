@@ -2,22 +2,17 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
+import math
+import time
+import datetime
+from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
-
-from threading import Thread
-import time
-
 import gaia_text
 import properties
 import sparkworks
 import grovepi
 from grove_rgb_lcd import *
-import math
-
-import arduinoGauge
-import datetime
 
 exitapp = False
 timestamp = 0
@@ -82,8 +77,8 @@ def showLuminosity(light_value, a, b):
 
 
 # Print rooms
-print "Όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένες αίθουσες:"
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένες αίθουσες:")
 for room in properties.the_rooms:
     print '\t%s' % room.decode('utf-8')
 print '\n'
