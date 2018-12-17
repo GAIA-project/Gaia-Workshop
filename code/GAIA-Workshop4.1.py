@@ -56,23 +56,21 @@ def getData():
 def threaded_function(arg):
     global var
     while not exitapp:
-        print ("Start get data")
- 	var=1
+        print("Start get data")
+        var = 1
         getData()
         time.sleep(2)
-        var=0
-        #print ("Finish get data")
+        var = 0
+        # print ("Finish get data")
         time.sleep(10)
 
 
-print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Username: \n\t{0:s}\n".format(properties.username))
 print("Sensors:")
-
 
 sparkworks.connect(properties.username, properties.password)
 main_site = sparkworks.main_site()
 phases = sparkworks.current_phases(main_site)
-
 
 print("\t%s" % phases[0]["uri"])
 print("\t%s" % phases[1]["uri"])
@@ -98,7 +96,6 @@ def map_value_to_leds(m, val, leds_available):
 
 
 def main():
-
     global var 
     time.sleep(1)
     led = [0, 0, 0]
@@ -106,13 +103,13 @@ def main():
         basemax = max(maximum[0], maximum[1], maximum[2])
         print("Maximum base:" + str(basemax))
         for i in [0, 1, 2]:
-            print(str(phases[i]["uri"]) + " Current: " + str(current[i]) + " Ampere, Power: " + str(power_consumption[i]) + " Watt")
+            print("{0:s} Current: {1:.2f}A, Power: {2:.2f}W".format(phases[i]["uri"], current[i], power_consumption[i]))
             led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
             print(led[i])
-	    if var == 0:
-            	arduinoGauge.write(led[0], led[1], led[2])
+        if var == 0:
+            arduinoGauge.write(led[0], led[1], led[2])
         for i in [0, 1, 2]:
-            setText("Phase:" + str(i + 1) + "\n" + str(power_consumption[i]) + "W")
+            setText("Phase: {0:d}\n{1:>15.2f}W".format(i+1, power_consumption[i]))
             setRGB(R[i], G[i], B[i])
             time.sleep(5)
 

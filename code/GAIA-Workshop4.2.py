@@ -50,7 +50,7 @@ def updateData(resource):
     global maximum
     val = summary["minutes60"]
     timestamp = summary["latestTime"]
-    #print time
+    # print time
     val_max = max(summary["minutes60"])
     return (val, float("{0:.1f}".format(float(val_max))))
 
@@ -65,16 +65,15 @@ def getData():
             power_consumption[i] = current[i]
 
 
-print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Username: \n\t{0:s}\n".format(properties.username))
 print("Sensors:")
 
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
 
-#sparkworks.connect(properties.username, properties.password)
+# sparkworks.connect(properties.username, properties.password)
 # for room in properties.the_power_room:
 #    print '\t%s' % room.decode('utf-8')
-
 
 # total Power
 sparkworks.connect(properties.username, properties.password)
@@ -122,7 +121,7 @@ def main():
         # detect button that choose phase
         try:
             if (grovepi.digitalRead(ButtonPh)):
-                setText("click...")
+                setText("Click...")
                 ph = ph + 1
                 if ph >= 4:
                     ph = 0
@@ -148,23 +147,24 @@ def main():
                 print(strtime)
 
                 for i in [0, 1, 2]:
-                    print(str(phases[i]["uri"]) + "Current: {0:.2f} A".format(current[i][t - 1] / 1000) + " Power: {0:.2f} W".format(power_consumption[i][t - 1] * 230 / 1000))
+                    msg = "{0:s} Current: {1:.2f} A, Power: {2:.2f} W"
+                    print(msg.format(phases[i]["uri"], current[i][t-1]/1000, power_consumption[i][t-1]*230/1000))
                     led[i] = map_value_to_leds(basemax, power_consumption[i][t - 1] * 230 / 1000, 11)
                     print(led[i])
                     time.sleep(.1)
                 arduinoGauge.write(led[0], led[1], led[2])
 
             if ph == 0:
-                new_text = strtime + "{0:.2f}W".format(p)
+                new_text = "{0:s}\n{1:>15.2f}W".format(strtime, p)
                 setRGB(60, 60, 60)
             else:
-                new_text = "Phase: {0:d}\n{1:.2f}W".format(ph, power_consumption[ph - 1][t - 1] * 230 / 1000)
+                new_text = "Phase: {0:d}\n{1:>15.2f}W".format(ph, power_consumption[ph-1][t-1]*230/1000)
                 setRGB(R[ph - 1], G[ph - 1], B[ph - 1])
             # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
         if text != new_text:
             text = new_text
-            print("LCD show:" + text)
+            print("LCD show: " + text)
             setText(text)
 
 

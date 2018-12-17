@@ -170,7 +170,7 @@ def loop():
         led[i] = m[0]
         word[i] = m[1]
     if var==0:	
-    	arduinoGauge.write(led[0], led[1], led[2])
+        arduinoGauge.write(led[0], led[1], led[2])
     new_text = ("DI: " + str(DI[set]) + "\n" + word[set])
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)

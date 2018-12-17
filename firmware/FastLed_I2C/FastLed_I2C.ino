@@ -27,7 +27,7 @@ CRGB leds3[NUM_LEDS];
 
 void setup() {
 
-  Wire.begin(45);               // join i2c bus with address #8
+  Wire.begin(0x2D);               // join i2c bus with address #8
   Wire.onReceive(receiveEvent); // register event
   Serial.begin(9600);           // start serial for output
 

@@ -40,9 +40,8 @@ grovepi.pinMode(ButtonH, "INPUT")
 grovepi.pinMode(ButtonPh, "INPUT")
 
 text = gaia_text.loading_data
-setText(text)
-
 setRGB(60, 60, 60)
+setText(text)
 
 
 def updateData(resource):
@@ -51,7 +50,7 @@ def updateData(resource):
     global maximum
     val = summary["minutes60"]
     timestamp = summary["latestTime"]
-    #print time
+    # print time
     val_max = max(summary["minutes60"])
     return (val, float("{0:.1f}".format(float(val_max))))
 
@@ -66,27 +65,24 @@ def getData():
             power_consumption[i] = current[i]
 
 
-print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Username: \n\t{0:s}\n".format(properties.username))
 print("Sensors:")
 
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
 
-#sparkworks.connect(properties.username, properties.password)
+# sparkworks.connect(properties.username, properties.password)
 # for room in properties.the_power_room:
 #	print '\t%s' % room.decode('utf-8')
-
 
 # total Power
 sparkworks.connect(properties.username, properties.password)
 main_site = sparkworks.main_site()
 phases = sparkworks.current_phases(main_site)
 
-
 print("\t%s" % phases[0]["uri"])
 print("\t%s" % phases[1]["uri"])
 print("\t%s" % phases[2]["uri"])
-
 
 new_text = "Click button to start!"
 
@@ -127,24 +123,23 @@ def main():
         # detect Button that choose houre
         try:
             if (grovepi.digitalRead(ButtonH)):
-                setText("New Houre")
+                setText("New Hour")
                 t = t + 1
                 if t == 47:
                     setText("Take new data")
                     t = 0
                 time.sleep(.5)
-                print("houre" + str(t))
+                print("Hour " + str(t))
         except IOError:
             print("Button Error")
         # detect button that choose phase
         try:
             if (grovepi.digitalRead(ButtonPh)):
-                setText("click...")
-
+                setText("Click...")
                 ph = ph + 1
                 if ph >= 4:
                     ph = 0
-                print("Ph" + str(ph))
+                print("Phase " + str(ph))
                 time.sleep(.5)
         except IOError:
             print("Button Error")
@@ -158,21 +153,21 @@ def main():
         else:
             # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
             if new_t != t:
-                total = power_consumption[0][t - 1] + power_consumption[1][t - 1] + power_consumption[2][t - 1]
+                total = power_consumption[0][t-1] + power_consumption[1][t-1] + power_consumption[2][t-1]
                 val = megisti()
-                #print val
-                m = val[0]
-                t = val[1]
-                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-                strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-
-                new_text = strtime + ": " + str(float("{0:.2f}".format(m))) + "W"
+                # print val
+                mx = val[0]
+                tm = val[1]
+                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (tm - 1))
+                strtime = timevalue.strftime('%Y-%m-%d %H:%M')
+                new_text = "{0:s}\n{1:>15.2f}W".format(strtime, mx)
                 setRGB(60, 60, 60)
+                setText(text)
             # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
         if text != new_text:
             text = new_text
-            print("LCD show:", text)
+            print("LCD show: " + text)
             setText(text)
 
 

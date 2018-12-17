@@ -59,7 +59,7 @@ def threaded_function(arg):
         getData()
 
 
-print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Username: \n\t{0:s}\n".format(properties.username))
 print("Sensors:")
 
 arduinoGauge.connect()
@@ -85,7 +85,7 @@ def map_value_to_leds(m, val, leds_available):
         return 0
     steap = m / leds_available
     mod = val / steap + 1
-    #print "led number:"+str(math.floor(mod))+"Val"+str(val)
+    # print "led number:"+str(math.floor(mod))+"Val"+str(val)
     return math.floor(mod)
 
 
@@ -98,16 +98,16 @@ def main():
         basemax = max(maximum[0], maximum[1], maximum[2])
         print("Maximum base:" + str(basemax))
         for i in [0, 1, 2]:
-            print(str(phases[i]["uri"]) + " Current: " + str(current[i]) + " Ampere, Power: " + str(power_consumption[i]) + " Watt")
+            print("{0:s} Current: {1:.2f}A, Power: {2:.2f}W".format(phases[i]["uri"], current[i], power_consumption[i]))
             led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
             print(led[i])
         arduinoGauge.write(led[0], led[1], led[2])
         time.sleep(0.5)
-        setText("Total Power:\n" + str(p) + "W")
+        setText("Total Power:\n{0:>15.2f}W".format(p))
         setRGB(60, 60, 60)
         time.sleep(10)
         for i in [0, 1, 2]:
-            setText("Phase:" + str(i + 1) + "\n" + str(power_consumption[i]) + "W")
+            setText("Phase: {0:d}\n{1:>15.2f}W".format(i+1, power_consumption[i]))
             setRGB(R[i], G[i], B[i])
             time.sleep(5)
 
