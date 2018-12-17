@@ -14,7 +14,6 @@ import sparkworks
 
 from grove_rgb_lcd import *
 import math
-
 import arduinoGauge
 
 exitapp = False
@@ -25,6 +24,7 @@ maximum = [0, 0, 0, 0]
 main_site = None
 phases = []
 total_power = None
+var = 0
 
 R = [255, 255, 0]
 G = [0, 128, 255]
@@ -54,16 +54,20 @@ def getData():
 
 
 def threaded_function(arg):
-    global power_consumption, current, maximum
+    global var
     while not exitapp:
+        print ("Start get data")
+ 	var=1
         getData()
+        time.sleep(2)
+        var=0
+        #print ("Finish get data")
+        time.sleep(10)
 
 
 print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
 print("Sensors:")
 
-arduinoGauge.connect()
-arduinoGauge.write(1, 2, 3)
 
 sparkworks.connect(properties.username, properties.password)
 main_site = sparkworks.main_site()
@@ -79,6 +83,10 @@ getData()
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
 
+time.sleep(1)
+arduinoGauge.connect()
+arduinoGauge.write(1, 2, 3)
+
 
 def map_value_to_leds(m, val, leds_available):
     if val == 0:
@@ -90,6 +98,8 @@ def map_value_to_leds(m, val, leds_available):
 
 
 def main():
+
+    global var 
     time.sleep(1)
     led = [0, 0, 0]
     while not exitapp:
@@ -99,8 +109,8 @@ def main():
             print(str(phases[i]["uri"]) + " Current: " + str(current[i]) + " Ampere, Power: " + str(power_consumption[i]) + " Watt")
             led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
             print(led[i])
-            arduinoGauge.write(led[0], led[1], led[2])
-
+	    if var == 0:
+            	arduinoGauge.write(led[0], led[1], led[2])
         for i in [0, 1, 2]:
             setText("Phase:" + str(i + 1) + "\n" + str(power_consumption[i]) + "W")
             setRGB(R[i], G[i], B[i])

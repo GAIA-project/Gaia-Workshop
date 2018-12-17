@@ -40,7 +40,7 @@ for i in [0, 1, 2]:
 # initiliaze global variables
 set = 0
 exitapp = False
-
+var = 0
 
 # Take new values from the data base
 def updateSiteData(site, param):
@@ -61,8 +61,14 @@ def getData():
 
 
 def threaded_function(arg):
+    global var
     while not exitapp:
+        var=1
         getData()
+        time.sleep(2)
+        var=0
+#       print ("Finish get data")
+        time.sleep(10)
 
 
 def threaded_function2(arg):
@@ -154,7 +160,7 @@ new_text = ""
 
 
 def loop():
-    global new_text, change, show, set, text
+    global new_text, change, show, set, text, var
     DI = [0, 0, 0]
     led = [0, 0, 0]
     word = [" ", " ", " "]
@@ -163,8 +169,8 @@ def loop():
         m = mapDItoLED(DI[i])
         led[i] = m[0]
         word[i] = m[1]
-
-    arduinoGauge.write(led[0], led[1], led[2])
+    if var==0:	
+    	arduinoGauge.write(led[0], led[1], led[2])
     new_text = ("DI: " + str(DI[set]) + "\n" + word[set])
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)
