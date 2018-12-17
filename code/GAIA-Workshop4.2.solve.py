@@ -153,6 +153,7 @@ def main():
         else:
             # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
             if new_t != t:
+                new_t = t
                 total = power_consumption[0][t-1] + power_consumption[1][t-1] + power_consumption[2][t-1]
                 val = megisti()
                 # print val
