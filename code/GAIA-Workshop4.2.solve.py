@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os
@@ -67,8 +66,8 @@ def getData():
             power_consumption[i] = current[i]
 
 
-print ("Username: \n\t%s\n" % properties.username).encode("utf8", "replace")
-print "Sensors:"
+print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Sensors:")
 
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
@@ -84,9 +83,9 @@ main_site = sparkworks.main_site()
 phases = sparkworks.current_phases(main_site)
 
 
-print "\t%s" % phases[0]["uri"]
-print "\t%s" % phases[1]["uri"]
-print "\t%s" % phases[2]["uri"]
+print("\t%s" % phases[0]["uri"])
+print("\t%s" % phases[1]["uri"])
+print("\t%s" % phases[2]["uri"])
 
 
 new_text = "Click button to start!"
@@ -134,9 +133,9 @@ def main():
                     setText("Take new data")
                     t = 0
                 time.sleep(.5)
-                print "houre" + str(t)
+                print("houre" + str(t))
         except IOError:
-            print "Button Error"
+            print("Button Error")
         # detect button that choose phase
         try:
             if (grovepi.digitalRead(ButtonPh)):
@@ -145,10 +144,10 @@ def main():
                 ph = ph + 1
                 if ph >= 4:
                     ph = 0
-                print "Ph" + str(ph)
+                print("Ph" + str(ph))
                 time.sleep(.5)
         except IOError:
-            print "Button Error"
+            print("Button Error")
 
         # Show Total Power (dev=0)
         if t == 0:
@@ -173,7 +172,7 @@ def main():
 
         if text != new_text:
             text = new_text
-            print "LCD show:", text
+            print("LCD show:", text)
             setText(text)
 
 

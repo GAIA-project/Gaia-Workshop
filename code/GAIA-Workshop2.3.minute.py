@@ -82,11 +82,11 @@ def showLuminosity(light_value, a, b):
 
 
 # Print rooms
-print "Όνομα χρήστη:\n\t%s\n" % properties.username
-print "Επιλεγμένες αίθουσες:"
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Επιλεγμένες αίθουσες:")
 for room in properties.the_rooms:
-    print '\t%s' % room.decode('utf-8')
-print '\n'
+    print('\t%s' % room.decode('utf-8'))
+print('\n')
 
 
 # total Power
@@ -104,7 +104,7 @@ def main():
     new_rm = 0
     val = 0
 
-    print "Συλλογή δεδομένων, παρακαλώ περιμένετε..."
+    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     getSensorData("Luminosity")
     new_text = "Loading data..."
     setRGB(50, 50, 50)
@@ -115,7 +115,7 @@ def main():
             new_t = t
             timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 300 * (t - 1))
             strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-            print strtime
+            print(strtime)
 
         val = sensorValues[rm][new_t - 1]
         showLuminosity(val, pin1[rm], pin2[rm])
@@ -125,7 +125,7 @@ def main():
         if (text != new_text) or (new_rm != rm):
             text = new_text
             new_rm = rm
-            print "Φωτεινότητα: ", properties.the_rooms[rm], val
+            print("Φωτεινότητα: ", properties.the_rooms[rm], val)
             # print "LCD show:", text
             setText(text)
         # Detect the button that changes the hour
@@ -138,7 +138,7 @@ def main():
                     t = 0
                 time.sleep(.4)
         except IOError:
-            print "Button Error"
+            print("Button Error")
         # Detect the button that changes the room
         try:
             if (grovepi.digitalRead(Button2)):
@@ -147,7 +147,7 @@ def main():
                     rm = 0
                 time.sleep(.5)
         except IOError:
-            print "Button Error"
+            print("Button Error")
 
 
 try:

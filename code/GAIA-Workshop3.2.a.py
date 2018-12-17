@@ -12,8 +12,6 @@ import sparkworks
 
 import grovepi
 from grove_rgb_lcd import *
-import threading
-import math
 
 # select pins for the leds
 pin1 = [2, 4, 6]
@@ -137,8 +135,8 @@ sparkworks.connect(properties.username, properties.password)
 rooms = sparkworks.select_rooms(properties.the_rooms)
 
 print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
+setText(gaia_text.loading_data)
 getData()
 
 thread = Thread(target=threaded_function, args=(10,))
@@ -154,7 +152,10 @@ def loop():
     for i in [0, 1, 2]:
         hi[i] = calHI(temperature[i], humidity[i])
     maximum(hi)
-    new_text = ("T:" + str(temperature[set]) + "oC,H:" + str(humidity[set]) + "%RH HI = " + str(hi[set]))
+    lcd_temp = "T:{0:4.1f}oC\n".format(temperature[set])
+    lcd_hum = "H:{0:4.1f}%RH".format(humidity[set])
+    lcd_hi = "HI:{0:4.1f}".format(hi[set]).rjust(16 - len(lcd_hum))
+    new_text = lcd_temp + lcd_hum + lcd_hi
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)
     if text != new_text:

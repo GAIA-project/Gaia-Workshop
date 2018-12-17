@@ -59,8 +59,8 @@ def threaded_function(arg):
         getData()
 
 
-print ("Username: \n\t%s\n" % properties.username).encode("utf8", "replace")
-print "Sensors:"
+print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Sensors:")
 
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
@@ -70,10 +70,10 @@ main_site = sparkworks.main_site()
 phases = sparkworks.current_phases(main_site)
 
 
-print "\t%s" % phases[0]["uri"]
-print "\t%s" % phases[1]["uri"]
-print "\t%s" % phases[2]["uri"]
-print "Collecting data, please wait..."
+print("\t%s" % phases[0]["uri"])
+print("\t%s" % phases[1]["uri"])
+print("\t%s" % phases[2]["uri"])
+print("Collecting data, please wait...")
 getData()
 
 thread = Thread(target=threaded_function, args=(10,))
@@ -85,7 +85,7 @@ def map_value_to_leds(m, val, leds_available):
         return 0
     steap = m / leds_available
     mod = val / steap + 1
-  #  print "led number:"+str(math.floor(mod))+"Val"+str(val)
+    #print "led number:"+str(math.floor(mod))+"Val"+str(val)
     return math.floor(mod)
 
 
@@ -96,18 +96,18 @@ def main():
 
         p = power_consumption[0] + power_consumption[1] + power_consumption[2]
         basemax = max(maximum[0], maximum[1], maximum[2])
-        print "Maximum base:" + str(basemax)
+        print("Maximum base:" + str(basemax))
         for i in [0, 1, 2]:
-            print phases[i]["uri"], " Current: " + str(current[i]) + " Ampere  " + "Power: " + str(power_consumption[i]) + " Wat"
+            print(str(phases[i]["uri"]) + " Current: " + str(current[i]) + " Ampere, Power: " + str(power_consumption[i]) + " Watt")
             led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
-            print led[i]
+            print(led[i])
         arduinoGauge.write(led[0], led[1], led[2])
         time.sleep(0.5)
-        setText("Total Power:    " + str(p) + "       W")
+        setText("Total Power:\n" + str(p) + "W")
         setRGB(60, 60, 60)
         time.sleep(10)
         for i in [0, 1, 2]:
-            setText("Phase " + str(i + 1) + "         " + str(power_consumption[i]) + "      W")
+            setText("Phase:" + str(i + 1) + "\n" + str(power_consumption[i]) + "W")
             setRGB(R[i], G[i], B[i])
             time.sleep(5)
 

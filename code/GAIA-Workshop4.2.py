@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 import os
@@ -66,8 +65,8 @@ def getData():
             power_consumption[i] = current[i]
 
 
-print ("Username: \n\t%s\n" % properties.username).encode("utf8", "replace")
-print "Sensors:"
+print(("Username: \n\t%s\n" % properties.username).encode("utf8", "replace"))
+print("Sensors:")
 
 arduinoGauge.connect()
 arduinoGauge.write(1, 2, 3)
@@ -83,9 +82,9 @@ main_site = sparkworks.main_site()
 phases = sparkworks.current_phases(main_site)
 
 
-print "\t%s" % phases[0]["uri"]
-print "\t%s" % phases[1]["uri"]
-print "\t%s" % phases[2]["uri"]
+print("\t%s" % phases[0]["uri"])
+print("\t%s" % phases[1]["uri"])
+print("\t%s" % phases[2]["uri"])
 
 
 new_text = "Click button to start!"
@@ -117,9 +116,9 @@ def main():
                     setText("Take new data")
                     t = 0
                 time.sleep(.5)
-                print "hour" + str(t)
+                print("hour" + str(t))
         except IOError:
-            print "Button Error"
+            print("Button Error")
         # detect button that choose phase
         try:
             if (grovepi.digitalRead(ButtonPh)):
@@ -127,10 +126,10 @@ def main():
                 ph = ph + 1
                 if ph >= 4:
                     ph = 0
-                print "Ph" + str(ph)
+                print("Ph" + str(ph))
                 time.sleep(.5)
         except IOError:
-            print "Button Error"
+            print("Button Error")
 
         # Show Total Power (dev=0)
         if t == 0:
@@ -145,28 +144,27 @@ def main():
                 p = power_consumption[0][t - 1] + power_consumption[1][t - 1] + power_consumption[2][t - 1]
 
                 timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-                strtime = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-                print strtime
+                strtime = timevalue.strftime('%Y-%m-%d %H:%M')
+                print(strtime)
 
                 for i in [0, 1, 2]:
-                    print phases[i]["uri"], " Current: " + str(float("{0:.2f}".format(current[i][t - 1] / 1000))) + \
-                        " A  " + "Power: " + str(float("{0:.2f}".format(power_consumption[i][t - 1] * 230 / 1000))) + " W"
+                    print(str(phases[i]["uri"]) + "Current: {0:.2f} A".format(current[i][t - 1] / 1000) + " Power: {0:.2f} W".format(power_consumption[i][t - 1] * 230 / 1000))
                     led[i] = map_value_to_leds(basemax, power_consumption[i][t - 1] * 230 / 1000, 11)
-                    print led[i]
+                    print(led[i])
                     time.sleep(.1)
                 arduinoGauge.write(led[0], led[1], led[2])
 
             if ph == 0:
-                new_text = strtime + ": " + str(float("{0:.2f}".format(p))) + "W"
+                new_text = strtime + "{0:.2f}W".format(p)
                 setRGB(60, 60, 60)
             else:
-                new_text = "ph" + str(ph) + ":" + str(float("{0:.2f}".format(power_consumption[ph - 1][t - 1] * 230 / 1000))) + "W"
+                new_text = "Phase: {0:d}\n{1:.2f}W".format(ph, power_consumption[ph - 1][t - 1] * 230 / 1000)
                 setRGB(R[ph - 1], G[ph - 1], B[ph - 1])
             # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
         if text != new_text:
             text = new_text
-            print "LCD show:", text
+            print("LCD show:" + text)
             setText(text)
 
 

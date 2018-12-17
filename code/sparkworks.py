@@ -34,7 +34,7 @@ def getToken(username, password):
     return response.json()
 
 
-def sites():
+def get_sites():
     global token, the_sites
     response = apiGetAuthorized('/v1/location/site')
     _sites = response.json()["sites"]
@@ -42,6 +42,7 @@ def sites():
         isReuse = False
         for user in site['sharedUsers']:
             if (user['username'] == usernm) and (user['reusePermission'] is True):
+                _selected_sites.append(site)
                 isReuse = True
         if isReuse:
             for subsite in site['subsites']:
@@ -52,7 +53,7 @@ def sites():
 
 
 def main_site():
-    for site in sites():
+    for site in get_sites():
         if len(site["subsites"]) != 0:
             for user in site['sharedUsers']:
                 if usernm == user['username'] and user['viewPermission'] and user['reusePermission']:
@@ -61,7 +62,7 @@ def main_site():
 
 def rooms():
     _rooms = []
-    _sites = sites()
+    _sites = get_sites()
     for site in _sites:
         if len(site["subsites"]) != 0:
             pass
@@ -72,7 +73,7 @@ def rooms():
 
 def select_rooms(names):
     _rooms = []
-    _sites = sites()
+    _sites = get_sites()
     for name in names:
         for site in _sites:
             if site["name"].encode('utf-8').strip() == name.strip():
@@ -157,7 +158,7 @@ def total_power(site):
             return _resource
 
 
-def total_site(site,name):
+def total_site(site, name):
     _resources = siteResources_all_exact(site, name)
     for _resource in _resources:
         if _resource["uri"].startswith("site-"):

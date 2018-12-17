@@ -235,7 +235,7 @@ def loop():
             print("διαφορά υγρασία: {0:.1f}".format(difH[rm]))
 
             # Select text for LCD
-            new_text = "Diff Temp:{0:.1f}".format(difTem[rm]).rjust(16) + "Diff Humi:{0:.1f}".format(difH[rm]).rjust(16)
+            new_text = "Diff Temp:{0:4.1f}".format(difTem[rm]).rjust(16) + "Diff Humi:{0:4.1f}".format(difH[rm]).rjust(16)
             # Select colour of the specific room for the LCD
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)

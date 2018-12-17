@@ -16,14 +16,14 @@ while True:
         if new_text != text1:
             new_text = text1
             setText(new_text)
-            print new_text
+            print(new_text)
         setRGB(50, 50, 50)
         if grovepi.digitalRead(button):
             new_text = text2
-            setText(new_text)
-            print new_text
             setRGB(0, 255, 0)
+            setText(new_text)
+            print(new_text)
             time.sleep(.5)
 
     except IOError:
-        print ("Error")
+        print("Error")
