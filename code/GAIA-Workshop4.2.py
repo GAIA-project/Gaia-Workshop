@@ -155,7 +155,7 @@ def main():
                 arduinoGauge.write(led[0], led[1], led[2])
 
             if ph == 0:
-                new_text = "{0:s}\n{1:>15.2f}W".format(strtime, p)
+                new_text = "{0:s}\n{1:>15.2f}W".format(strtime, p*230/1000)
                 setRGB(60, 60, 60)
             else:
                 new_text = "Phase: {0:d}\n{1:>15.2f}W".format(ph, power_consumption[ph-1][t-1]*230/1000)
