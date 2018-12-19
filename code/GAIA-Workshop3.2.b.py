@@ -9,7 +9,7 @@ from threading import Thread
 import gaia_text
 import properties
 import sparkworks
-import arduinoGauge
+import arduino_gauge_serial as arduino_gauge
 
 import grovepi
 from grove_rgb_lcd import *
@@ -135,8 +135,8 @@ def calDI(t, rh):
 print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
 setText(gaia_text.loading_data)
 setRGB(50, 50, 50)
-arduinoGauge.connect()
-arduinoGauge.write(1, 1, 1)
+arduino_gauge.connect()
+arduino_gauge.write(1, 1, 1)
 
 print("όνομα χρήστη:\n\t%s\n" % properties.username)
 print("Επιλεγμένη αίθουσα:")
@@ -170,7 +170,7 @@ def loop():
         led[i] = m[0]
         word[i] = m[1]
     if var==0:	
-        arduinoGauge.write(led[0], led[1], led[2])
+        arduino_gauge.write(led[0], led[1], led[2])
     new_text = ("DI: " + str(DI[set]) + "\n" + word[set])
     setRGB(R[set], G[set], B[set])
     time.sleep(.1)

@@ -16,7 +16,7 @@ import grovepi
 from grove_rgb_lcd import *
 import math
 
-import arduinoGauge
+import arduino_gauge_serial as arduino_gauge
 import datetime
 
 exitapp = False

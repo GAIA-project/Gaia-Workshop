@@ -20,9 +20,20 @@ def connect():
     time.sleep(3)
     return True
 
+
 def write(a, b, c):
-    data = [ord(str(a)), ord(str(b)), ord(str(c)), ord('\n')]
+    _a = ord(str(int(a)))
+    _b = ord(str(int(b)))
+    _c = ord(str(int(c)))
+    data = [_a, _b, _c, ord('\n')]
     bus.write_i2c_block_data(ARDUINO_GAUGE_ADDR, 0x20, data)
 
+
 if __name__ == '__main__':
-    write(5, 4, 3)
+    while True:
+        write(5, 4, 3)
+        time.sleep(1)
+        write('c', 'c', 'c')
+        time.sleep(1)
+        write(1, 2, 3)
+        time.sleep(1)

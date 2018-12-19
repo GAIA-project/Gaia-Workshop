@@ -14,7 +14,7 @@ import properties
 import sparkworks
 import grovepi
 from grove_rgb_lcd import *
-import arduinoGauge
+import arduino_gauge_serial as arduino_gauge
 
 exitapp = False
 timestamp = 0
@@ -143,8 +143,8 @@ new_text = "Click button to start!"
 setRGB(50, 50, 50)
 
 
-arduinoGauge.connect()
-arduinoGauge.write(1, 1, 1)
+arduino_gauge.connect()
+arduino_gauge.write(1, 1, 1)
 
 def loop():
     global text, new_text, timestamp, t, rm, new_t, strtime, strdate, rmchange
@@ -230,7 +230,7 @@ def loop():
             setRGB(R[rm], G[rm], B[rm])
             setText(new_text)
 
-            arduinoGauge.write(led[0], led[1], 0)
+            arduino_gauge.write(led[0], led[1], 0)
             # Show minimum DI on the Leds
             minimum(DI)
 

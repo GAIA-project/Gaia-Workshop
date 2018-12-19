@@ -15,7 +15,7 @@ import grovepi
 from grove_rgb_lcd import *
 import math
 
-import arduinoGauge
+import arduino_gauge_serial as arduino_gauge
 import datetime
 exitapp = False
 current = [0, 0, 0]
@@ -68,8 +68,8 @@ def getData():
 print("Username: \n\t{0:s}\n".format(properties.username))
 print("Sensors:")
 
-arduinoGauge.connect()
-arduinoGauge.write(1, 2, 3)
+arduino_gauge.connect()
+arduino_gauge.write(1, 2, 3)
 
 # sparkworks.connect(properties.username, properties.password)
 # for room in properties.the_power_room:
@@ -152,7 +152,7 @@ def main():
                     led[i] = map_value_to_leds(basemax, power_consumption[i][t - 1] * 230 / 1000, 11)
                     print(led[i])
                     time.sleep(.1)
-                arduinoGauge.write(led[0], led[1], led[2])
+                arduino_gauge.write(led[0], led[1], led[2])
 
             if ph == 0:
                 setRGB(60, 60, 60)

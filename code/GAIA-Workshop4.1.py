@@ -14,7 +14,7 @@ import sparkworks
 
 from grove_rgb_lcd import *
 import math
-import arduinoGauge
+import arduino_gauge_serial as arduino_gauge
 
 exitapp = False
 max_power = 0
@@ -82,8 +82,8 @@ thread = Thread(target=threaded_function, args=(10,))
 thread.start()
 
 time.sleep(1)
-arduinoGauge.connect()
-arduinoGauge.write(1, 2, 3)
+arduino_gauge.connect()
+arduino_gauge.write(1, 2, 3)
 
 
 def map_value_to_leds(m, val, leds_available):
@@ -107,7 +107,7 @@ def main():
             led[i] = map_value_to_leds(basemax, power_consumption[i], 7)
             print(led[i])
         if var == 0:
-            arduinoGauge.write(led[0], led[1], led[2])
+            arduino_gauge.write(led[0], led[1], led[2])
         for i in [0, 1, 2]:
             setText("Phase: {0:d}\n{1:>15.2f}W".format(i+1, power_consumption[i]))
             setRGB(R[i], G[i], B[i])
