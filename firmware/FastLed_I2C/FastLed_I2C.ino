@@ -59,32 +59,29 @@ void loop() {
 
 void receiveEvent(int bytes) {
   Serial.println(bytes);
-  int i  = 0;
+  unsigned int i  = 0;
   char m[4] = {0, 0, 0, 0};
 
-  int addr  = Wire.read();
-  while(Wire.available()) {
-    m[i++] = Wire.read();
-    if(i >= sizeof(m)) {
-      while(Wire.available()) char t = Wire.read();
-      break;
+  if(Wire.read() == 0x20){
+    for(i = 0; i < sizeof(m); i++) {
+      m[i] = Wire.read();
+    }
+  
+    Serial.println("====");
+    Serial.println(m[0]);
+    Serial.println(m[1]);
+    Serial.println(m[2]);
+    Serial.println("====");
+  
+    if(m[3] == '\n') {
+      Serial.println("Opening leds");
+      for(int i = 0; i < NUM_LEDS; i++) {
+        int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
+        leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF;
+        leds2[j] = (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_2 : COLOR_OFF;
+        leds3[j] = (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_3 : COLOR_OFF;
+      }
+      FastLED.show();
     }
   }
-
-  Serial.println("====");
-  Serial.println(m[0]);
-  Serial.println(m[1]);
-  Serial.println(m[2]);
-  Serial.println("====");
-
-  if(addr == 0x20 && m[3] == '\n') {
-    Serial.println("Opening leds");
-    for(int i = 0; i < NUM_LEDS; i++) {
-      int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
-      leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF;
-      leds2[j] = (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_2 : COLOR_OFF;
-      leds3[j] = (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_3 : COLOR_OFF;
-    }
-  }
-  FastLED.show();
 }
