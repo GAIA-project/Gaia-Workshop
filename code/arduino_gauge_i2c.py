@@ -22,18 +22,17 @@ def connect():
 
 
 def write(a, b, c):
-    _a = ord(str(int(a)))
-    _b = ord(str(int(b)))
-    _c = ord(str(int(c)))
-    data = [_a, _b, _c, ord('\n')]
+    _a = hex(int(a))[-1]
+    _b = hex(int(b))[-1]
+    _c = hex(int(c))[-1]
+    if __name__ == '__main__':
+        print(_a, _b, _c)
+    data = [ord(_a), ord(_b), ord(_c), ord('\n')]
     bus.write_i2c_block_data(ARDUINO_GAUGE_ADDR, 0x20, data)
 
 
 if __name__ == '__main__':
     while True:
-        write(5, 4, 3)
-        time.sleep(1)
-        write('c', 'c', 'c')
-        time.sleep(1)
-        write(1, 2, 3)
-        time.sleep(1)
+        for x in range(13):
+            time.sleep(1)
+            write(x, x, x)

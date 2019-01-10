@@ -1,3 +1,4 @@
+#include <Wire.h>
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
@@ -33,9 +34,9 @@ uint32_t leds3[NUM_LEDS];
 
 void setup() {
 
-  Serial.begin(9600);
-  // while the serial stream is not open, do nothing:
-  while (!Serial) ;
+  Wire.begin(0x2D);             // join i2c bus with address #8
+  Wire.onReceive(receiveEvent); // register event
+  Serial.begin(9600);           // start serial for output
 
     // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
   #if defined (__AVR_ATtiny85__)
@@ -56,6 +57,10 @@ void setup() {
 
 }
 
+void loop() {
+  delay(100);
+}
+
 void setStripColor(Adafruit_NeoPixel* strip, uint32_t* leds) {
   for (int i = 0; i < NUM_LEDS; i++) {
     strip->setPixelColor(i, leds[i]);
@@ -63,31 +68,37 @@ void setStripColor(Adafruit_NeoPixel* strip, uint32_t* leds) {
   }
 }
 
-void loop() {
+void receiveEvent(int bytes) {
+  Serial.println(bytes);
+  unsigned int i  = 0;
+  char m[4] = {0, 0, 0, 0};
 
-  if (Serial.available() > 0 ) {
-    Serial.println( Serial.available() );
+  int addr  = Wire.read();
+  while(Wire.available()) {
+    m[i++] = Wire.read();
+    if(i >= sizeof(m)) {
+      while(Wire.available()) char t = Wire.read();
+      break;
+    }
+  }
 
-    char m[3] = {0, 0, 0};
-    Serial.readBytes(m, 3);
+  Serial.println("====");
+  Serial.println(m[0]);
+  Serial.println(m[1]);
+  Serial.println(m[2]);
+  Serial.println("====");
 
-    Serial.println("====");
-    Serial.println(m[0]);
-    Serial.println(m[1]);
-    Serial.println(m[2]);
-    Serial.println("====");
-
+  if(addr == 0x20 && m[3] == '\n') {
+    Serial.println("Opening leds");
     for (int i = 0; i < NUM_LEDS; i++) {
       int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
       leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? c1 : c0;
       leds2[j] = (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? c2 : c0;
       leds3[j] = (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? c3 : c0;
     }
-    if (Serial.read() == '\n') {
-      setStripColor(&strip1, leds1);
-      setStripColor(&strip2, leds2);
-      setStripColor(&strip3, leds3);
-    }
+    setStripColor(&strip1, leds1);
+    setStripColor(&strip2, leds2);
+    setStripColor(&strip3, leds3);
   }
 }
 
