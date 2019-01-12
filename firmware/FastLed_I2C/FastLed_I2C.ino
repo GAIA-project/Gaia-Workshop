@@ -1,6 +1,13 @@
 #include <Wire.h>
 #include "FastLED.h"
 
+#define DEBUG 0
+#if DEBUG == 1
+#define DBG(x) x
+#else
+#define DBG(x)
+#endif
+
 // How many leds in your strip?
 #define NUM_LEDS 12
 // Is your strip upside down?
@@ -17,7 +24,7 @@
 #define COLOR_ON_1 CRGB( 32, 0, 32)
 #define COLOR_ON_2 CRGB( 32, 16, 0)
 #define COLOR_ON_3 CRGB( 0, 32, 0)
-#define COLOR_OFF CRGB::Black
+#define COLOR_OFF  CRGB::Black
 
 // Define the array of leds
 CRGB leds1[NUM_LEDS];
@@ -25,11 +32,6 @@ CRGB leds2[NUM_LEDS];
 CRGB leds3[NUM_LEDS];
 
 void setup() {
-
-  Wire.begin(0x2D);             // join i2c bus with address #8
-  Wire.onReceive(receiveEvent); // register event
-  Serial.begin(9600);           // start serial for output
-
   FastLED.addLeds<NEOPIXEL, DATA_PIN1>(leds1, NUM_LEDS);
   FastLED.addLeds<NEOPIXEL, DATA_PIN2>(leds2, NUM_LEDS);
   FastLED.addLeds<NEOPIXEL, DATA_PIN3>(leds3, NUM_LEDS);
@@ -51,6 +53,10 @@ void setup() {
     FastLED.show();
     delay(100);
   }
+
+  Wire.begin(0x2D);             // join i2c bus with address #8
+  Wire.onReceive(receiveEvent); // register event
+  DBG(Serial.begin(9600);)      // start serial for output
 }
 
 void loop() {
@@ -58,7 +64,7 @@ void loop() {
 }
 
 void receiveEvent(int bytes) {
-  Serial.println(bytes);
+  DBG(Serial.println(bytes);)
   unsigned int i  = 0;
   char m[4] = {0, 0, 0, 0};
 
@@ -66,15 +72,17 @@ void receiveEvent(int bytes) {
     for(i = 0; i < sizeof(m); i++) {
       m[i] = Wire.read();
     }
-  
-    Serial.println("====");
-    Serial.println(m[0]);
-    Serial.println(m[1]);
-    Serial.println(m[2]);
-    Serial.println("====");
+
+    while(Wire.available()) Wire.read();
+
+    DBG(Serial.println("====");)
+    DBG(Serial.println(m[0]);)
+    DBG(Serial.println(m[1]);)
+    DBG(Serial.println(m[2]);)
+    DBG(Serial.println("====");)
   
     if(m[3] == '\n') {
-      Serial.println("Opening leds");
+      DBG(Serial.println("Opening leds");)
       for(int i = 0; i < NUM_LEDS; i++) {
         int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
         leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF;
@@ -83,5 +91,5 @@ void receiveEvent(int bytes) {
       }
       FastLED.show();
     }
-  }
+  } else while(Wire.available()) Wire.read();
 }

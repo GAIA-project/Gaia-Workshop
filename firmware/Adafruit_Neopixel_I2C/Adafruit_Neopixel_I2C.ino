@@ -4,6 +4,13 @@
   #include <avr/power.h>
 #endif
 
+#define DEBUG 0
+#if DEBUG == 1
+#define DBG(x) x
+#else
+#define DBG(x)
+#endif
+
 // How many leds in your strip?
 #define NUM_LEDS 12
 // Is your strip upside down?
@@ -17,32 +24,17 @@
 #define DATA_PIN2 8
 #define DATA_PIN3 9
 
-#define BRIGHTNESS 50
+#define COLOR_ON_1 Adafruit_NeoPixel::Color(32, 0, 32)
+#define COLOR_ON_2 Adafruit_NeoPixel::Color(32, 16, 0)
+#define COLOR_ON_3 Adafruit_NeoPixel::Color(0, 32, 0)
+#define COLOR_OFF  Adafruit_NeoPixel::Color(0, 0, 0)
 
+#define BRIGHTNESS 50
 Adafruit_NeoPixel strip1 = Adafruit_NeoPixel(NUM_LEDS, DATA_PIN1, NEO_GRBW + NEO_KHZ800);
 Adafruit_NeoPixel strip2 = Adafruit_NeoPixel(NUM_LEDS, DATA_PIN2, NEO_GRBW + NEO_KHZ800);
 Adafruit_NeoPixel strip3 = Adafruit_NeoPixel(NUM_LEDS, DATA_PIN3, NEO_GRBW + NEO_KHZ800);
 
-uint32_t c1 = Adafruit_NeoPixel::Color(32, 0, 32);
-uint32_t c2 = Adafruit_NeoPixel::Color(32, 16, 0);
-uint32_t c3 = Adafruit_NeoPixel::Color(0, 32, 0);
-uint32_t c0 = Adafruit_NeoPixel::Color(0, 0, 0);
-
-uint32_t leds1[NUM_LEDS];
-uint32_t leds2[NUM_LEDS];
-uint32_t leds3[NUM_LEDS];
-
 void setup() {
-
-  Wire.begin(0x2D);             // join i2c bus with address #8
-  Wire.onReceive(receiveEvent); // register event
-  //Serial.begin(9600);           // start serial for output
-
-    // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
-  #if defined (__AVR_ATtiny85__)
-    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
-  #endif
-  // End of trinket special code
   strip1.setBrightness(BRIGHTNESS);
   strip1.begin();
   strip1.show(); // Initialize all pixels to 'off'
@@ -55,21 +47,17 @@ void setup() {
   strip3.begin();
   strip3.show(); // Initialize all pixels to 'off'
 
+  Wire.begin(0x2D);             // join i2c bus with address #8
+  Wire.onReceive(receiveEvent); // register event
+  DBG(Serial.begin(9600);)      // start serial for output
 }
 
 void loop() {
   delay(100);
 }
 
-void setStripColor(Adafruit_NeoPixel* strip, uint32_t* leds) {
-  for (int i = 0; i < NUM_LEDS; i++) {
-    strip->setPixelColor(i, leds[i]);
-    strip->show();
-  }
-}
-
 void receiveEvent(int bytes) {
-  //Serial.println(bytes);
+  DBG(Serial.println(bytes);)
   unsigned int i  = 0;
   char m[4] = {0, 0, 0, 0};
 
@@ -78,23 +66,25 @@ void receiveEvent(int bytes) {
       m[i] = Wire.read();
     }
 
-    //Serial.println("====");
-    //Serial.println(m[0]);
-    //Serial.println(m[1]);
-    //Serial.println(m[2]);
-    //Serial.println("====");
+    while(Wire.available()) Wire.read();
+
+    DBG(Serial.println("====");)
+    DBG(Serial.println(m[0]);)
+    DBG(Serial.println(m[1]);)
+    DBG(Serial.println(m[2]);)
+    DBG(Serial.println("====");)
   
     if(m[3] == '\n') {
-      //Serial.println("Opening leds");
-      for (int i = 0; i < NUM_LEDS; i++) {
+      DBG(Serial.println("Opening leds");) 
+      for(int i = 0; i < NUM_LEDS; i++) {
         int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
-        leds1[j] = (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? c1 : c0;
-        leds2[j] = (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? c2 : c0;
-        leds3[j] = (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? c3 : c0;
+        strip1.setPixelColor(j, (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF);
+        strip2.setPixelColor(j, (i < m[1] - (m[1] < 'A' ? '0' : (m[1] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_2 : COLOR_OFF);
+        strip3.setPixelColor(j, (i < m[2] - (m[2] < 'A' ? '0' : (m[2] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_3 : COLOR_OFF);
       }
-      setStripColor(&strip1, leds1);
-      setStripColor(&strip2, leds2);
-      setStripColor(&strip3, leds3);
+      strip1.show();
+      strip2.show();
+      strip3.show();
     }
-  }
+  } else while(Wire.available()) Wire.read();
 }
