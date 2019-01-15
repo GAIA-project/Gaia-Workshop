@@ -17,9 +17,9 @@
 // For led chips like Neopixels, which have a data line, ground, and power, you just
 // need to define DATA_PIN.  For led chipsets that are SPI based (four wires - data, clock,
 // ground, and power), like the LPD8806 define both DATA_PIN and CLOCK_PIN
-#define DATA_PIN1 7
+#define DATA_PIN1 9
 #define DATA_PIN2 8
-#define DATA_PIN3 9
+#define DATA_PIN3 7
 
 #define COLOR_ON_1 CRGB( 32, 0, 32)
 #define COLOR_ON_2 CRGB( 32, 16, 0)
@@ -68,7 +68,7 @@ void receiveEvent(int bytes) {
   unsigned int i  = 0;
   char m[4] = {0, 0, 0, 0};
 
-  if(Wire.read() == 0x20){
+  if(Wire.read() == 0x20) {
     for(i = 0; i < sizeof(m); i++) {
       m[i] = Wire.read();
     }

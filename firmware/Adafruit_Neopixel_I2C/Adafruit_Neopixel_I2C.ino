@@ -61,7 +61,7 @@ void receiveEvent(int bytes) {
   unsigned int i  = 0;
   char m[4] = {0, 0, 0, 0};
 
-  if(Wire.read() == 0x20){
+  if(Wire.read() == 0x20) {
     for(i = 0; i < sizeof(m); i++) {
       m[i] = Wire.read();
     }
@@ -75,7 +75,7 @@ void receiveEvent(int bytes) {
     DBG(Serial.println("====");)
   
     if(m[3] == '\n') {
-      DBG(Serial.println("Opening leds");) 
+      DBG(Serial.println("Opening leds");)
       for(int i = 0; i < NUM_LEDS; i++) {
         int j = (i < NUM_LEDS/2) ? (i + MOD) : (i - MOD);
         strip1.setPixelColor(j, (i < m[0] - (m[0] < 'A' ? '0' : (m[0] < 'a' ? 'A' - 10 : 'a' - 10))) ? COLOR_ON_1 : COLOR_OFF);
