@@ -5,7 +5,6 @@ import sys
 import math
 import time
 import datetime
-from copy import deepcopy
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
@@ -37,7 +36,7 @@ new_text = ""
 exitapp = False
 sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 
-# Select the pins Outputs and inputs
+# Assign input and output pins
 grovepi.pinMode(button, "INPUT")
 for i in [0, 1]:
     grovepi.pinMode(pin1[i], "OUTPUT")
@@ -112,7 +111,6 @@ def minimum(v, phenomenon, unit):
 
 # Close all the leds
 def closeAllLeds():
-    global pin1, pin2
     for i in [0, 1, 2]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
@@ -133,25 +131,26 @@ def breakSleep():
         time.sleep(.1)
 
 
-def traverseSubGroups(group_uuid):
-    _lowest = []
-    _subgroups = sparkworks.subGroups(group_uuid)
+def traverseSubGroups(group):
+    _bottom = []
+    _subgroups = sparkworks.subGroups(group['uuid'])
     if len(_subgroups) == 0:
-        _lowest = group_uuid
+        _bottom.append(group)
     else:
-        for _sg in _subgroups:
-            _lowest.append(traverseSubGroups(_sg['uuid']))
-    return _lowest
+        for _subgroup in _subgroups:
+            _list = traverseSubGroups(_subgroup)
+            for _item in _list:
+                _bottom.append(_item)
+    return _bottom
 
 
-def flatten_list(nested_list):
-    nested_list = deepcopy(nested_list)
-    while nested_list:
-        sublist = nested_list.pop(0)
-        if isinstance(sublist, list):
-            nested_list = sublist + nested_list
-        else:
-            yield sublist
+def selectRooms(site, local):
+    _rooms = []
+    for _local in local:
+        for _site in site:
+            if _site['name'].encode('utf-8').strip() == _local.strip():
+                _rooms.append(_site)
+    return _rooms
 
 
 closeAllLeds()
@@ -163,13 +162,9 @@ for room in properties.the_rooms:
 print('\n')
 
 sparkworks.connect(properties.username, properties.password)
-rooms_list = traverseSubGroups(properties.uuid)
-rooms_list = list(flatten_list(rooms_list))
-rooms = []
-for room in rooms_list:
-    site = sparkworks.group(room)
-    if site['name'].encode('utf-8').strip() in properties.the_rooms:
-        rooms.append(site)
+site_rooms = traverseSubGroups(sparkworks.group(properties.uuid))
+rooms = selectRooms(site_rooms, properties.the_rooms)
+
 
 def loop():
     global new_text, temperature, humidity
