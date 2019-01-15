@@ -1,5 +1,10 @@
-
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import os
+import sys
 import time
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
 

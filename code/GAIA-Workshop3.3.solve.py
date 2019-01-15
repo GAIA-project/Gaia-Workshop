@@ -5,74 +5,65 @@ import sys
 import math
 import time
 import datetime
+from copy import deepcopy
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
-
-import gaia_text
-import properties
-import sparkworks
 import grovepi
 from grove_rgb_lcd import *
-import arduino_gauge_serial as arduino_gauge
+import gaia_text
+import properties
+from sparkworks import SparkWorks
+import arduino_gauge_i2c as arduino_gauge
 
-exitapp = False
-timestamp = 0
-main_site = None
-temperature = [0, 0, 0]
-humidity = [0, 0, 0]
 
 # select pins for the leds
 pin1 = [2, 4]
 pin2 = [3, 5]
+button1 = 8
+button2 = 7
 
 # select colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-text = ""
-new_text = ""
-t = 0
-new_t = 0
-rm = 0
-rmchange = 0
-strtime = " "
-strdate = " "
+# variables for the sensors
+temp = [0, 0, 0]
+humi = [0, 0, 0]
 
+time_idx = None
+time_idx_changed = False
+room_idx = 0
+room_idx_changed = False
+timestamp = None
+exitapp = False
+sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 
-Button1 = 8
-Button2 = 7
-grovepi.pinMode(Button1, "INPUT")
-grovepi.pinMode(Button2, "INPUT")
+# Assign input and output pins
+grovepi.pinMode(button1, "INPUT")
+grovepi.pinMode(button2, "INPUT")
 for i in [0, 1]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
-# initiliaze the LCD screen color and value
-text = gaia_text.loading_data
-setText(text)
-setRGB(60, 60, 60)
 
-
-def updateData(site, param):
-    global timestamp, maximum
-    resource = sparkworks.siteResource(site, param)
-    summary = sparkworks.summary(resource)
+# Take new values from the database
+def updateData(group, param):
+    global timestamp
+    resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
+    summary = sparkworks.summary(resource['uuid'])
     val = summary["minutes60"]
     timestamp = summary["latestTime"]
-    return (val)
+    return val
 
 
 def getSensorData():
-    global temperature, humidity
+    # global temperature, humidity
     if not exitapp:
         for i in[0, 1]:
-            val = updateData(rooms[i], "Temperature")
-            temperature[i] = val
-        for i in[0, 1]:
-            val = updateData(rooms[i], "Relative Humidity")
-            humidity[i] = val
+            temp[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
+            humi[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
 
 
 # Find out the minimum value
@@ -89,13 +80,12 @@ def minimum(v):
 
 # Close all the leds
 def closeAllLeds():
-    global pin1, pin2
     for i in [0, 1]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
 
-def mapDItoLED(di):
+def mapDItoGauge(di):
     led = 0
     word = " "
     if di < -1.7:
@@ -122,9 +112,30 @@ def mapDItoLED(di):
     return led, word
 
 
-def calDI(t, rh):
+def calcDI(t, rh):
     DI = t - 0.55 * (1 - 0.01 * rh) * (t - 14.5)
-    return float("{0:.2f}".format(float(DI)))
+    return float("{0:.1f}".format(float(DI)))
+
+
+def traverseSubGroups(group_uuid):
+    _lowest = []
+    _subgroups = sparkworks.subGroups(group_uuid)
+    if len(_subgroups) == 0:
+        _lowest = group_uuid
+    else:
+        for _sg in _subgroups:
+            _lowest.append(traverseSubGroups(_sg['uuid']))
+    return _lowest
+
+
+def flatten_list(nested_list):
+    nested_list = deepcopy(nested_list)
+    while nested_list:
+        sublist = nested_list.pop(0)
+        if isinstance(sublist, list):
+            nested_list = sublist + nested_list
+        else:
+            yield sublist
 
 
 closeAllLeds()
@@ -135,104 +146,83 @@ for room in properties.the_rooms:
     print('\t%s' % room.decode('utf-8'))
 print('\n')
 
-
-# total Power
 sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
-new_text = "Click button to start!"
-setRGB(50, 50, 50)
+rooms_list = traverseSubGroups(properties.uuid)
+rooms_list = list(flatten_list(rooms_list))
+rooms = []
+for room in rooms_list:
+    site = sparkworks.group(room)
+    if site['name'].encode('utf-8').strip() in properties.the_rooms:
+        rooms.append(site)
 
-
-arduino_gauge.connect()
-arduino_gauge.write(1, 1, 1)
 
 def loop():
-    global text, new_text, timestamp, t, rm, new_t, strtime, strdate, rmchange
-    tem = [0, 0]
-    hum = [0, 0]
-    # detect Button that choose houre
+    global time_idx, room_idx, time_idx_changed, room_idx_changed
+    # Detect button used for selecting hours
     try:
-        if (grovepi.digitalRead(Button1)):
-            print("νέα ώρα")
+        if (grovepi.digitalRead(button1)):
+            print("Νέα ώρα")
             setText("New Hour")
-            t = t + 1
-            if t == 24:
-                setText("Take new data")
-                t = 0
+            setRGB(50, 50, 50)
+            time_idx += 1
+            if time_idx >= 48:
+                time_idx = None
+            time_idx_changed = True
             time.sleep(1)
     except IOError:
         print("Button Error")
-    # Detect the button that choose room
+    # Detect button used for selecting rooms
     try:
-        if (grovepi.digitalRead(Button2)):
-            print("νέα τάξη")
-            rmchange = 1
-            rm = rm + 1
-            if rm >= 2:
-                rm = 0
+        if (grovepi.digitalRead(button2)):
+            print("Νέα αίθουσα")
+            setText("New Room")
+            setRGB(50, 50, 50)
+            room_idx += 1
+            if room_idx >= 2:
+                room_idx = 0
+            room_idx_changed = True
             time.sleep(1)
     except IOError:
         print("Button Error")
 
-    if t == 0:
+    if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-        getSensorData()
-        new_text = "Getting data..."
+        setText(gaia_text.loading_data)
         setRGB(50, 50, 50)
-        t = 1
+        getSensorData()
+        time_idx = 0
+        time_idx_changed = True
 
-    else:
-        if (new_t != t) or rmchange:
-            new_t = t
-            rmchange = 0
-            timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-            strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-            strtime = timevalue.strftime('%H:%M')
+    if time_idx_changed or room_idx_changed:
+        room_idx_changed = False
+        time_idx_changed = False
+        timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (time_idx))
+        strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+        strtime = timevalue.strftime('%H:%M')
 
-            # Temperature at the time
-            # Temperature room Purple
-            tem[0] = temperature[0][new_t - 1]
-            # Temperature room Orange
-            tem[1] = temperature[1][new_t - 1]
+        # Calculate DI
+        di = [0, 0]
+        di_map = [None, None]
+        for i in range(2):
+            di[i] = calcDI(temp[i][time_idx], humi[i][time_idx])
+            di_map[i] = mapDItoGauge(di[i])
 
-            # Humidity at the time
-            # Humidity room Purple
-            hum[0] = humidity[0][new_t - 1]
-            # temperature room Orange
-            hum[1] = humidity[1][new_t - 1]
+        # Print to terminal
+        print(" Ημερομηνία: {0:s}".format(strdate))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], temp[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], humi[room_idx][time_idx]))
+        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[room_idx], di[room_idx], di_map[room_idx][1]))
 
-            # Calculate DI
-            DI = [0, 0]
-            led = [0, 0]
-            word = [" ", " ", " "]
-            # DI for room Purple
-            DI[0] = calDI(tem[0], hum[0])
-            # DI for room Orange
-            DI[1] = calDI(tem[1], hum[1])
+        # Print DI to LCD
+        str_di = "DI:{0:.1f}".format(di[room_idx]).rjust(16 - len(strtime))
+        str_desc = di_map[room_idx][1].rjust(16)
+        new_text = strtime + str_di + str_desc
+        setRGB(R[room_idx], G[room_idx], B[room_idx])
+        setText(new_text)
 
-            # Calculate the Number of leds open at Purple room
-            val = mapDItoLED(DI[0])
-            led[0] = val[0]
-            word[0] = val[1]
-            # Calculate the number od leds open at Orange room
-            val = mapDItoLED(DI[1])
-            led[1] = val[0]
-            word[1] = val[1]
-
-            # Print to terminal
-            print(strdate)
-            print(properties.the_rooms[rm] + ": Θερμοκρασία: {0:.1f}".format(tem[rm]))
-            print(properties.the_rooms[rm] + ": Ύγρασία: {0:.1f}".format(hum[rm]))
-            print(properties.the_rooms[rm] + ": DI: {0:.1f} ".format(DI[rm]) + word[rm])
-
-            # Print DI to LCD
-            new_text = strtime + "DI:{0:.1f}".format(DI[rm]).rjust(16 - len(strtime)) + word[rm].rjust(16)
-            setRGB(R[rm], G[rm], B[rm])
-            setText(new_text)
-
-            arduino_gauge.write(led[0], led[1], 0)
-            # Show minimum DI on the Leds
-            minimum(DI)
+        arduino_gauge.write(di_map[0][0], di_map[1][0], 0)
+        # Show minimum DI on the Leds
+        minimum(di)
 
 
 def main():

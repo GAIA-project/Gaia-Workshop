@@ -2,91 +2,74 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
-
-from threading import Thread
+import math
 import time
-
-import gaia_text
-import properties
-import sparkworks
+import datetime
+from copy import deepcopy
+from threading import Thread
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
-import math
-
-import arduino_gauge_serial as arduino_gauge
-import datetime
-
 import forecastio
+import gaia_text
+import properties
+from sparkworks import SparkWorks
 
-
-exitapp = False
-timestamp = 0
-main_site = None
-temperature = [0, 0, 0]
-humidity = [0, 0, 0]
 
 # select pins for the leds
 pin1 = [2, 4]
 pin2 = [3, 5]
+button1 = 8
+button2 = 7
 
 # select colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-text = ""
-new_text = ""
-t = 0
-new_t = 0
-rm = 0
-rmchange = 0
-strtime = " "
-strdate = " "
-outTmp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-outHum = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+# variables for the sensors
+in_temp = [0, 0, 0]
+in_humi = [0, 0, 0]
+out_temp = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+out_humi = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-Button1 = 8
-Button2 = 7
-grovepi.pinMode(Button1, "INPUT")
-grovepi.pinMode(Button2, "INPUT")
+time_idx = None
+time_idx_changed = False
+room_idx = 0
+room_idx_changed = False
+timestamp = None
+exitapp = False
+sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+
+# Assign input and output pins
+grovepi.pinMode(button1, "INPUT")
+grovepi.pinMode(button2, "INPUT")
 for i in [0, 1]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
 
-# initiliaze the LCD screen color and value
-text = gaia_text.loading_data
-setText(text)
-setRGB(60, 60, 60)
-
-
-def updateData(site, param):
-    global timestamp, maximum
-    resource = sparkworks.siteResource(site, param)
-    summary = sparkworks.summary(resource)
+# Take new values from the database
+def updateData(group, param):
+    global timestamp
+    resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
+    summary = sparkworks.summary(resource['uuid'])
     val = summary["minutes60"]
-    # print val
     timestamp = summary["latestTime"]
-    return (val)
+    return val
 
 
 def getSensorData():
-    global temperature, humidity
     if not exitapp:
-        for i in[0, 1, 2]:
-            val = updateData(rooms[i], "Temperature")
-            temperature[i] = val
-        for i in[0, 1, 2]:
-            val = updateData(rooms[i], "Relative Humidity")
-            humidity[i] = val
+        for i in [0, 1]:
+            in_temp[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
+            in_humi[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
 
 
-# Find out the minimum value and show
+# Find out the minimum value
 def minimum(v):
     min_value = min(v[0], v[1])
-    # print min_value, v
     for i in [0, 1]:
         if v[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -97,127 +80,132 @@ def minimum(v):
 
 
 def getOutsideData():
-    global outTem, outHum
     # Outside weather necessary variables
     api_key = "a96063dd6aacda945d68bb05209e848f"
     current_time = datetime.datetime.now()
-    print("time:" + str(current_time))
+    print("forecast.io: " + str(current_time))
     forecast = forecastio.load_forecast(api_key, properties.GPSposition[0], properties.GPSposition[1], time=current_time)
 
-    byHour = forecast.hourly()
+    by_hour = forecast.hourly()
     i = 0
-    houre = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    for hourlyData in byHour.data:
+    hour = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    for hourly_data in by_hour.data:
         if i < 16:
-            houre[15 - i] = hourlyData.time
-            outTmp[15 - i] = hourlyData.temperature
-            outHum[15 - i] = hourlyData.humidity * 100
-            i = i + 1
+            hour[15 - i] = hourly_data.time
+            out_temp[15 - i] = hourly_data.temperature
+            out_humi[15 - i] = hourly_data.humidity * 100
+            i += 1
 
 
 # Close all the leds
 def closeAllLeds():
-    global pin1, pin2
     for i in [0, 1]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
 
+def traverseSubGroups(group_uuid):
+    _lowest = []
+    _subgroups = sparkworks.subGroups(group_uuid)
+    if len(_subgroups) == 0:
+        _lowest = group_uuid
+    else:
+        for _sg in _subgroups:
+            _lowest.append(traverseSubGroups(_sg['uuid']))
+    return _lowest
+
+
+def flatten_list(nested_list):
+    nested_list = deepcopy(nested_list)
+    while nested_list:
+        sublist = nested_list.pop(0)
+        if isinstance(sublist, list):
+            nested_list = sublist + nested_list
+        else:
+            yield sublist
+
+
 closeAllLeds()
 # Print rooms
-print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
 print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
     print('\t%s' % room.decode('utf-8'))
 print('\n')
 
-
-# total Power
 sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
-new_text = "Click button to start!"
-setRGB(50, 50, 50)
+rooms_list = traverseSubGroups(properties.uuid)
+rooms_list = list(flatten_list(rooms_list))
+rooms = []
+for room in rooms_list:
+    site = sparkworks.group(room)
+    if site['name'].encode('utf-8').strip() in properties.the_rooms:
+        rooms.append(site)
 
 
 def loop():
-    global text, new_text, timestamp, t, rm, new_t, strtime, strdate, outTem, outHum, rmchange
-    tem = [0, 0]
-    hum = [0, 0]
-    # detect Button that choose houre
+    global time_idx, room_idx, time_idx_changed, room_idx_changed
+    # Detect button used for selecting hours
     try:
-        if (grovepi.digitalRead(Button1)):
+        if (grovepi.digitalRead(button1)):
             print("Νέα ώρα")
             setText("New Hour")
-            t = t + 1
-            if t == 15:
-                setText("Take new data")
-                t = 0
+            setRGB(50, 50, 50)
+            time_idx += 1
+            if time_idx >= 15:
+                time_idx = None
+            time_idx_changed = True
             time.sleep(1)
     except IOError:
         print("Button Error")
-    # Detect the button that choose room
+    # Detect button used for selecting rooms
     try:
-        if (grovepi.digitalRead(Button2)):
-            print("Νέα τάξη")
-            rmchange = 1
-            rm = rm + 1
-            if rm >= 2:
-                rm = 0
+        if (grovepi.digitalRead(button2)):
+            print("Νέα αίθουσα")
+            setText("New Room")
+            setRGB(50, 50, 50)
+            room_idx += 1
+            if room_idx >= 2:
+                room_idx = 0
+            room_idx_changed = True
             time.sleep(1)
     except IOError:
         print("Button Error")
 
-    if t == 0:
+    if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+        setText(gaia_text.loading_data)
+        setRGB(50, 50, 50)
         getSensorData()
         getOutsideData()
-        new_text = "Getting data..."
-        setRGB(50, 50, 50)
-        t = 1
+        time_idx = 0
+        time_idx_changed = True
 
-    else:
-        if (new_t != t) or (rmchange):
-            rmchange = 0
-            new_t = t
-            timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-            strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
-            strtime = timevalue.strftime('%H:%M')
+    if time_idx_changed or room_idx_changed:
+        room_idx_changed = False
+        time_idx_changed = False
+        timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (time_idx))
+        strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+        strtime = timevalue.strftime('%H:%M')
 
-            # Temperature each houre.
-            # Temperature at the Purple room
-            tem[0] = temperature[0][new_t - 1]
-            # Temperature at the orange room
-            tem[1] = temperature[1][new_t - 1]
-            # Temperature outside
-            outT = outTmp[new_t - 1]
+        # Print to terminal
+        print(" Ημερομηνία: {0:s}".format(strdate))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}".format("Εξωτερική", out_temp[time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}".format("Εξωτερική", out_humi[time_idx]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], in_temp[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], in_humi[room_idx][time_idx]))
 
-            # Humidity each houre
-            # Humdiity at Purlple room
-            hum[0] = humidity[0][new_t - 1]
-            # humidity at  Orange room
-            hum[1] = humidity[1][new_t - 1]
-            # Humidity outside
-            outH = outHum[new_t - 1]
+        # Print to LCD
+        str_in_temp = "Ti:{0:.1f}".format(in_temp[room_idx][time_idx])
+        str_in_humi = "Hi:{0:.1f}".format(in_humi[room_idx][time_idx])
+        str_out_temp = "To:{0:.1f}".format(out_temp[time_idx]).rjust(16 - len(str_in_temp))
+        str_out_humi = "Ho:{0:.1f}".format(out_humi[time_idx]).rjust(16 - len(str_in_humi))
+        new_text = str_in_temp + str_out_temp + str_in_humi + str_out_humi
+        setRGB(R[room_idx], G[room_idx], B[room_idx])
+        setText(new_text)
 
-            # Show red the classroom with minimum temperature
-            minimum(tem)
-
-            # print at terminal
-            print(strdate)
-            print("εξωτερική θερμοκρασία: " + str(outT))
-            print("εξωτερική υγρασία: " + str(outH))
-            print(properties.the_rooms[rm] + " θερμοκρασία: {0:.1f}".format(tem[rm]))
-            print(properties.the_rooms[rm] + " υγρασία: {0:.1f}".format(hum[rm]))
-
-            # Select text for LCD
-            temp_in = "Ti:{0:.1f}".format(tem[rm])
-            temp_out = "To:{0:.1f}".format(outT).rjust(16 - len(temp_in))
-            hum_in = "Hi:{0:.1f}".format(hum[rm])
-            hum_out = "Ho:{0:.1f}".format(outH).rjust(16 - len(hum_in))
-            new_text = temp_in + temp_out + hum_in + hum_out
-            # Select colour of the specific room for the LCD
-            setRGB(R[rm], G[rm], B[rm])
-            setText(new_text)
+        # Show red the classroom with minimum temperature
+        minimum([in_temp[0][time_idx], in_temp[1][time_idx]])
 
 
 def main():

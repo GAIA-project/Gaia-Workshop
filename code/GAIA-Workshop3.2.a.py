@@ -2,20 +2,24 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
+import math
 import time
+import datetime
+from copy import deepcopy
 from threading import Thread
-import gaia_text
-import properties
-import sparkworks
-
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
+import gaia_text
+import properties
+from sparkworks_v2 import SparkWorks
+
 
 # select pins for the leds
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
+button = 8
 
 # select colors for the rooms
 R = [255, 255, 0]
@@ -23,38 +27,37 @@ G = [0, 128, 255]
 B = [255, 0, 0]
 
 # variables for the sensors
-humidity = [0, 0, 0]
-temperature = [0, 0, 0]
+temp = [0, 0, 0]
+humi = [0, 0, 0]
 
-# Select the pins Outputs and inputs
-Button = 8
-grovepi.pinMode(Button, "INPUT")
+opt = 0
+text = ""
+new_text = ""
+exitapp = False
+sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 
+# Assign input and output pins
+grovepi.pinMode(button, "INPUT")
 for i in [0, 1, 2]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
-# initiliaze global variables
-set = 0
-exitapp = False
-
 
 # Take new values from the data base
-def updateSiteData(site, param):
-    resource = sparkworks.siteResourceDevice(site, param)
-    latest = sparkworks.latest(resource)
+def updateSiteData(group, param):
+    resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
+    latest = sparkworks.latest(resource['uuid'])
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
 
 
-# Get data from
 def getData():
     for i in [0, 1, 2]:
         if not exitapp:
-            humidity[i] = updateSiteData(rooms[i], "Relative Humidity")
+            humi[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
     for i in [0, 1, 2]:
         if not exitapp:
-            temperature[i] = updateSiteData(rooms[i], "Temperature")
+            temp[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
 
 
 def threaded_function(arg):
@@ -64,7 +67,6 @@ def threaded_function(arg):
 
 def maximum(v):
     max_value = max(v[0], v[1], v[2])
-    #print max_value, v
     for i in [0, 1, 2]:
         if v[i] == max_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -77,7 +79,6 @@ def maximum(v):
 # Find out the minimum value
 def minimum(v):
     min_value = min(v[0], v[1], v[2])
-    #print min_value, v
     for i in [0, 1, 2]:
         if v[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
@@ -89,7 +90,6 @@ def minimum(v):
 
 # Close all the leds
 def closeAllLeds():
-    global pin1, pin2
     for i in [0, 1, 2]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
@@ -97,71 +97,90 @@ def closeAllLeds():
 
 # Function that check the button
 def checkButton():
-    global set, exitapp, mode
+    global opt
     try:
-        if (grovepi.digitalRead(Button)):
+        if (grovepi.digitalRead(button)):
             print("έχετε πιέσει το κουμπί")
-            if (set < 2):
-                set = set + 1
+            if (opt < 2):
+                opt = opt + 1
             else:
-                set = 0
-            time.sleep(.8)
-
+                opt = 0
+            time.sleep(.5)
     except IOError:
         print("Button Error")
 
 
 def calHI(t, hum):
     tmp = 1.8 * t + 32
-    #print "tempera",tmp
     hy = -42.379 + 2.04901523 * tmp + 10.14333127 * hum - 0.22475541 * tmp * hum - 0.00683783 * tmp * tmp - 0.05481717 * hum * hum + 0.00122874 * tmp * tmp * hum
     hy = hy + 0.00085282 * tmp * hum * hum - 0.00000199 * tmp * tmp * hum * hum
     hy = (hy - 32) * 0.55
-    #print "HY:",hy
-    return float("{0:.2f}".format(float(hy)))
+    return float("{0:.1f}".format(float(hy)))
 
 
-# Print rooms
+def traverseSubGroups(group_uuid):
+    _lowest = []
+    _subgroups = sparkworks.subGroups(group_uuid)
+    if len(_subgroups) == 0:
+        _lowest = group_uuid
+    else:
+        for _sg in _subgroups:
+            _lowest.append(traverseSubGroups(_sg['uuid']))
+    return _lowest
+
+
+def flatten_list(nested_list):
+    nested_list = deepcopy(nested_list)
+    while nested_list:
+        sublist = nested_list.pop(0)
+        if isinstance(sublist, list):
+            nested_list = sublist + nested_list
+        else:
+            yield sublist
+
+
 closeAllLeds()
-
-print("όνομα χρήστη:\n\t%s\n" % properties.username)
+# Print rooms
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
 print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
     print('\t%s' % room.decode('utf-8'))
 print('\n')
 
-
 sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
+rooms_list = traverseSubGroups(properties.uuid)
+rooms_list = list(flatten_list(rooms_list))
+rooms = []
+for room in rooms_list:
+    site = sparkworks.group(room)
+    if site['name'].encode('utf-8').strip() in properties.the_rooms:
+        rooms.append(site)
 
 print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-setRGB(50, 50, 50)
 setText(gaia_text.loading_data)
+setRGB(50, 50, 50)
 getData()
 
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
 
-text = ""
-new_text = ""
-
 
 def loop():
-    global new_text, change, show, set, text
+    global new_text, change, show, opt, text
     hi = [0, 0, 0]
     for i in [0, 1, 2]:
-        hi[i] = calHI(temperature[i], humidity[i])
+        hi[i] = calHI(temp[i], humi[i])
     maximum(hi)
-    lcd_temp = "T:{0:4.1f}oC\n".format(temperature[set])
-    lcd_hum = "H:{0:4.1f}%RH".format(humidity[set])
-    lcd_hi = "HI:{0:4.1f}".format(hi[set]).rjust(16 - len(lcd_hum))
-    new_text = lcd_temp + lcd_hum + lcd_hi
-    setRGB(R[set], G[set], B[set])
+    lcd_temp = "T:{0:4.1f}oC".format(temp[opt])
+    lcd_hi = "HI:{0:4.1f}".format(hi[opt]).rjust(16 - len(lcd_temp))
+    lcd_hum = "H:{0:4.1f}%RH".format(humi[opt])
+    new_text = lcd_temp + lcd_hi + lcd_hum
+    setRGB(R[opt], G[opt], B[opt])
     time.sleep(.1)
     if text != new_text:
-        print("θερμοκρασία " + properties.the_rooms[set] + ": " + str(temperature[set]) + "  Centrigrade")
-        print("υγρασία " + properties.the_rooms[set] + ": " + str(humidity[set]) + " %RH")
-        print("HI " + properties.the_rooms[set] + ": " + str(hi[set]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f} oC ".format(properties.the_rooms[opt], temp[opt]))
+        print("    Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[opt], humi[opt]))
+        print("         HI: {0:s}: {1:5.1f}".format(properties.the_rooms[opt], hi[opt]))
         text = new_text
         setText(text)
 

@@ -2,189 +2,248 @@
 import os
 import sys
 import requests
-import datetime
-sys.path.append(os.getcwd())
-import properties
-
-api_url = "https://api.sparkworks.net"
-sso_url = "https://sso.sparkworks.net/aa/oauth/token"
-client_id = properties.client_id
-client_secret = properties.client_secret
-token = {}
-
-usernm = ""
-passwd = ""
-
-_selected_sites = []
-_selected_site_resources = {}
 
 
-def connect(username, password):
-    global token, usernm, passwd
-    token = getToken(username, password)
-    usernm = username
-    passwd = password
+class SparkWorks:
+    NAME_CONST = "name"
+    UUID_CONST = "uuid"
+    SYSTEM_NAME_CONST = "systemName"
+    PHENOMENON_UUID_CONST = "phenomenonUuid"
+    SITE_PREFIX_CONST = "site-"
+    GAIA_CONST = "gaia-"
+    DEV_CONST_XBEE = "00"
+    DEV_CONST_LORA = "dragino-"
 
+    __api_url = "https://api.sparkworks.net"
+    __sso_url = "https://sso.sparkworks.net/aa/oauth/token"
+    __client_id = ""
+    __client_secret = ""
+    __username = ""
+    __token = {}
 
-def getToken(username, password):
-    global client_id, client_secret
-    params = {'username': username, 'password': password, 'grant_type': "password", 'client_id': client_id,
-              'client_secret': client_secret}
-    response = requests.post(sso_url, params)
-    return response.json()
+    __the_groups = []
+    __the_main_groups = []
+    __the_phenomena = []
+    __the_units = []
+    __the_site_resources = {}
 
+    def __init__(self, client_id=None, client_secret=None, api_url="https://api.sparkworks.net"):
+        self.__api_url = api_url
+        self.__client_id = client_id
+        self.__client_secret = client_secret
 
-def get_sites():
-    global token, the_sites
-    response = apiGetAuthorized('/v1/location/site')
-    _sites = response.json()["sites"]
-    for site in _sites:
-        isReuse = False
-        for user in site['sharedUsers']:
-            if (user['username'] == usernm) and (user['reusePermission'] is True):
-                _selected_sites.append(site)
-                isReuse = True
-        if isReuse:
-            for subsite in site['subsites']:
-                for user in subsite['sharedUsers']:
-                    if user['username'] == usernm and user['reusePermission'] is True:
-                        _selected_sites.append(subsite)
-    return _selected_sites
+    def connect(self, username, password):
+        self.__username = username
+        self.__token = self.getToken(username, password)
 
+    def getToken(self, username, password):
+        params = {'username': username, 'password': password, 'grant_type': "password", 'client_id': self.__client_id,
+                  'client_secret': self.__client_secret}
+        response = requests.post(self.__sso_url, params)
+        return response.json()
 
-def main_site():
-    for site in get_sites():
-        if len(site["subsites"]) != 0:
-            for user in site['sharedUsers']:
-                if usernm == user['username'] and user['viewPermission'] and user['reusePermission']:
-                    return site
-
-
-def rooms():
-    _rooms = []
-    _sites = get_sites()
-    for site in _sites:
-        if len(site["subsites"]) != 0:
-            pass
+    def groups(self):
+        if len(self.__the_groups) != 0:
+            return self.__the_groups
         else:
-            _rooms.append(site)
-    return _rooms
+            response = self.apiGetAuthorized('/v2/group')
+            self.__the_groups = response.json()
+            return self.__the_groups
 
+    def main_groups(self):
+        if len(self.__the_main_groups) != 0:
+            return self.__the_main_groups
+        else:
+            response = self.apiGetAuthorized('/v2/group/main')
+            self.__the_main_groups = response.json()
+            return self.__the_main_groups
 
-def select_rooms(names):
-    _rooms = []
-    _sites = get_sites()
-    for name in names:
-        for site in _sites:
-            if site["name"].encode('utf-8').strip() == name.strip():
-                _rooms.append(site)
-                break
-    return _rooms
+    def group(self, uuid):
+        if len(self.__the_groups) != 0:
+            for group in self.__the_groups:
+                if uuid == group[self.UUID_CONST]:
+                    return group
+        else:
+            response = self.apiGetAuthorized('/v2/group/' + uuid)
+            return response.json()
 
+    def subGroups(self, group_uuid):
+        response = self.apiGetAuthorized('/v2/group/' + group_uuid + '/subgroup/1')
+        return response.json()
 
-def siteResources(site):
-    if site["id"] not in _selected_site_resources:
-        response = apiGetAuthorized("/v1/location/site/" + str(site["id"]) + "/resource")
-        _selected_site_resources[site["id"]] = response.json()["resources"]
-    return _selected_site_resources[site["id"]]
+    def select_rooms(self, group_uuid, room_names):
+        _rooms = []
+        for room_name in room_names:
+            for site in self.subGroups(group_uuid):
+                if site[self.NAME_CONST].encode('utf-8').strip() == room_name.strip():
+                    _rooms.append(site)
+        return _rooms
 
+    def phenomena(self):
+        if len(self.__the_phenomena) != 0:
+            return self.__the_phenomena
+        else:
+            response = self.apiGetAuthorized('/v2/phenomenon')
+            self.__the_phenomena = response.json()
+            return self.__the_phenomena
 
-def siteResource(site, observedProperty):
-    _resources = siteResources(site)
-    for _resource in _resources:
-        if _resource["uri"].startswith("site-") and _resource["property"] == observedProperty:
-            return _resource
+    def phenomenon(self, name):
+        if len(self.__the_phenomena) != 0:
+            for the_phenomenon in self.__the_phenomena:
+                if name == the_phenomenon[self.NAME_CONST]:
+                    return the_phenomenon
+        else:
+            response = self.apiGetAuthorized('/v2/phenomenon')
+            self.__the_phenomena = response.json()
+            for the_phenomenon in self.__the_phenomena:
+                if name == the_phenomenon[self.NAME_CONST]:
+                    return the_phenomenon
 
+    def phenomenonByUuid(self, uuid):
+        if len(self.__the_phenomena) != 0:
+            for the_phenomenon in self.__the_phenomena:
+                if uuid == the_phenomenon[self.UUID_CONST]:
+                    return the_phenomenon
+        else:
+            response = self.apiGetAuthorized('/v2/phenomenon')
+            self.__the_phenomena = response.json()
+            for the_phenomenon in self.__the_phenomena:
+                if uuid == the_phenomenon[self.UUID_CONST]:
+                    return the_phenomenon
 
-def siteResourceDevice(site, observedProperty):
-    _resources = siteResources(site)
-    for _resource in _resources:
-        if _resource["uri"].startswith("site-") is False and _resource["property"] == observedProperty:
-            return _resource
+    def units(self):
+        if len(self.__the_units) != 0:
+            return self.__the_units
+        else:
+            response = self.apiGetAuthorized('/v2/unit')
+            self.__the_units = response.json()
+            return self.__the_units
 
+    def unit(self, name):
+        if len(self.__the_units) != 0:
+            for the_unit in self.__the_units:
+                if name == the_unit[self.NAME_CONST]:
+                    return the_unit
+        else:
+            response = self.apiGetAuthorized('/v2/phenomenon')
+            self.__the_units = response.json()
+            for the_unit in self.__the_units:
+                if name == the_unit[self.NAME_CONST]:
+                    return the_unit
 
-def siteResources_all(site, observedProperty):
-    _selected_resources = []
-    _resources = siteResources(site)
-    for _resource in _resources:
-        if observedProperty in _resource["property"]:
-            _selected_resources.append(_resource)
-    return _selected_resources
+    def groupResources(self, group_uuid):
+        if group_uuid not in self.__the_site_resources:
+            response = self.apiGetAuthorized("/v2/group/" + group_uuid + "/resource")
+            self.__the_site_resources[group_uuid] = response.json()
+        return self.__the_site_resources[group_uuid]
 
+    def groupAggResources(self, group_uuid):
+        _resources = self.groupResources(group_uuid)
+        _groupResources = []
+        for _resource in _resources:
+            if _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
+                _groupResources.append(_resource)
+        return _groupResources
 
-def siteResources_all_exact(site, observedProperty):
-    _selected_resources = []
-    _resources = siteResources(site)
-    for _resource in _resources:
-        if observedProperty == _resource["property"]:
-            _selected_resources.append(_resource)
-    return _selected_resources
+    def groupDeviceResources(self, group_uuid):
+        _resources = self.groupResources(group_uuid)
+        _groupResources = []
+        for _resource in _resources:
+            _is_lora = _resource[self.SYSTEM_NAME_CONST].startswith(self.DEV_CONST_LORA)
+            _is_xbee = _resource[self.SYSTEM_NAME_CONST].startswith(self.DEV_CONST_XBEE)
+            if _is_lora or _is_xbee:
+                _groupResources.append(_resource)
+        return _groupResources
 
+    def groupRpiResources(self, group_uuid):
+        _resources = self.groupResources(group_uuid)
+        _groupResources = []
+        for _resource in _resources:
+            if _resource[self.SYSTEM_NAME_CONST].startswith(self.GAIA_CONST):
+                _groupResources.append(_resource)
+        return _groupResources
 
-def power_phases(site):
-    _phases = {}
-    _uris = []
+    def groupAggResource(self, group_uuid, phenomenon_uuid):
+        _resources = self.groupAggResources(group_uuid)
+        for _resource in _resources:
+            if phenomenon_uuid == _resource[self.PHENOMENON_UUID_CONST]:
+                return _resource
 
-    _resources = siteResources_all(site, "Calculated Power Consumption")
-    for _resource in _resources:
-        if not _resource["uri"].startswith("site-"):
-            _phases[_resource["uri"]] = _resource
-            _uris.append(_resource["uri"])
-    _phases_ret = []
-    for uri in sorted(_uris):
-        _phases_ret.append(_phases[uri])
-    return _phases_ret
+    def groupDeviceResource(self, group_uuid, phenomenon_uuid):
+        _resources = self.groupDeviceResources(group_uuid)
+        for _resource in _resources:
+            if phenomenon_uuid == _resource[self.PHENOMENON_UUID_CONST]:
+                return _resource
 
+    def groupRpiDeviceResource(self, group_uuid, phenomenon_uuid):
+        _resources = self.groupRpiResources(group_uuid)
+        for _resource in _resources:
+            if phenomenon_uuid == _resource[self.PHENOMENON_UUID_CONST]:
+                return _resource
 
-def current_phases(site):
-    _phases = {}
-    _uris = []
+    def groupResources_all(self, group_uuid, phenomenon_uuid):
+        _selected_resources = []
+        _resources = self.groupResources(group_uuid)
+        for _resource in _resources:
+            if phenomenon_uuid == _resource[self.PHENOMENON_UUID_CONST]:
+                _selected_resources.append(_resource)
+        return _selected_resources
 
-    _resources = siteResources_all_exact(site, "Electrical Current")
-    for _resource in _resources:
-        if not _resource["uri"].startswith("site-"):
-            _phases[_resource["uri"]] = _resource
-            _uris.append(_resource["uri"])
-    _phases_ret = []
-    for uri in sorted(_uris):
-        _phases_ret.append(_phases[uri])
-    return _phases_ret
+    def power_phases(self, group_uuid):
+        _phases = {}
+        _uris = []
+        _resources = self.groupResources_all(group_uuid, self.phenomenon("Calculated Power Consumption")[self.UUID_CONST])
+        for _resource in _resources:
+            if not _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
+                _phases[_resource[self.SYSTEM_NAME_CONST]] = _resource
+                _uris.append(_resource[self.SYSTEM_NAME_CONST])
+        _phases_ret = []
+        for uri in sorted(_uris):
+            _phases_ret.append(_phases[uri])
+        return _phases_ret
 
+    def current_phases(self, group_uuid):
+        _phases = {}
+        _uris = []
+        _resources = self.groupResources_all(group_uuid, self.phenomenon("Electrical Current")[self.UUID_CONST])
+        for _resource in _resources:
+            if not _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
+                _phases[_resource[self.SYSTEM_NAME_CONST]] = _resource
+                _uris.append(_resource[self.SYSTEM_NAME_CONST])
+        _phases_ret = []
+        for uri in sorted(_uris):
+            _phases_ret.append(_phases[uri])
+        return _phases_ret
 
-def total_power(site):
-    _resources = siteResources_all(site, "Power Consumption")
-    for _resource in _resources:
-        if _resource["uri"].startswith("site-"):
-            return _resource
+    def total_power(self, site):
+        _resources = self.groupResources_all(site, self.phenomenon("Power Consumption")[self.UUID_CONST])
+        for _resource in _resources:
+            if _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
+                return _resource
 
+    def latest(self, resource_uuid):
+        response = self.apiGetAuthorized('/v2/resource/' + resource_uuid + '/latest')
+        return response.json()
 
-def total_site(site, name):
-    _resources = siteResources_all_exact(site, name)
-    for _resource in _resources:
-        if _resource["uri"].startswith("site-"):
-            return _resource
+    def summary(self, resource_uuid):
+        response = self.apiGetAuthorized('/v2/resource/' + resource_uuid + '/summary')
+        return response.json()
 
+    def resourceBySystemName(self, system_name):
+        response = self.apiPostAuthorized('/v2/resource/query', {self.SYSTEM_NAME_CONST: system_name})
+        return response.json()
 
-def latest(resource):
-    response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/latest').json()
-    print("Device: " + response['uri'] + " Time: " + datetime.datetime.fromtimestamp((response['latestTime'] / 1000.0)).strftime('%Y-%m-%d %H:%M:%S'))
-    return response
+    def resourceByUuid(self, uuid):
+        response = self.apiGetAuthorized('/v2/resource/' + uuid)
+        return response.json()
 
+    def resources(self):
+        response = self.apiGetAuthorized('/v2/resource')
+        return response.json()
 
-def summary(resource):
-    response = apiGetAuthorized('/v1/resource/' + str(resource["resourceId"]) + '/summary')
-    return response.json()
+    def apiGetAuthorized(self, path):
+        return requests.get(self.__api_url + path, headers={'Authorization': 'Bearer ' + self.__token["access_token"]})
 
-
-def resource(uri):
-    response = apiGetAuthorized('/v1/resource/uri/' + uri)
-    return response.json()
-
-
-def resources():
-    response = apiGetAuthorized('/v1/resource')
-    return response.json()["resources"]
-
-
-def apiGetAuthorized(path):
-    return requests.get(api_url + path, headers={'Authorization': 'Bearer ' + token["access_token"]})
+    def apiPostAuthorized(self, path, data):
+        return requests.post(self.__api_url + path, headers={'Authorization': 'Bearer ' + self.__token["access_token"],
+                                                             'Content-Type': 'application/json'}, json=data)

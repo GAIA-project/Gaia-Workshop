@@ -2,47 +2,43 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
-
-from threading import Thread
+import math
 import time
-
-import gaia_text
-import properties
-import sparkworks
+import datetime
+from copy import deepcopy
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
-import math
+import gaia_text
+import properties
+from sparkworks import SparkWorks
 
-import arduino_gauge_serial as arduino_gauge
-import datetime
-exitapp = False
-
-set = 0
-timestamp = 0
-main_site = None
-temperature = [0, 0, 0]
-humidity = [0, 0, 0]
-# Slect how much houres you use for the average
-hours = 5
 
 # select pins for the leds
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
+button = 8
 
 # select colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
+timestamp = 0
+main_site = None
+humidity = [0, 0, 0]
+temperature = [0, 0, 0]
+# Hours to average
+hours = 5
+
 text = ""
 new_text = ""
+exitapp = False
+sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 
-Button = 8
-
-grovepi.pinMode(Button, "INPUT")
-
+# Select the pins Outputs and inputs
+grovepi.pinMode(button, "INPUT")
 for i in [0, 1]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
@@ -54,10 +50,10 @@ setText(text)
 setRGB(60, 60, 60)
 
 
-def updateDataAvg(site, param):
+def updateDataAvg(group, param):
     global timestamp, maximum, average, hours
-    resource = sparkworks.siteResource(site, param)
-    summary = sparkworks.summary(resource)
+    resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
+    summary = sparkworks.summary(resource['uuid'])
     val = summary["minutes60"]
     # make the averages
     i = 0
@@ -67,49 +63,26 @@ def updateDataAvg(site, param):
         i = i + 1
     average = average / hours
     timestamp = summary["latestTime"]
-    return float("{0:.2f}".format(float(average)))
+    return float("{0:.1f}".format(float(average)))
 
 
 def getData():
-    global temperature
     if not exitapp:
         for i in[0, 1, 2]:
-            val = updateDataAvg(rooms[i], "Temperature")
+            val = updateDataAvg(rooms[i], sparkworks.phenomenon("Temperature"))
             temperature[i] = val
         for i in[0, 1, 2]:
-            val = updateDataAvg(rooms[i], "Relative Humidity")
+            val = updateDataAvg(rooms[i], sparkworks.phenomenon("Relative Humidity"))
             humidity[i] = val
 
 
-def threaded_function(arg):
-    global temperature, humidity, noise, luminosity
-    while not exitapp:
-        checkButton()
-
-
-# Function that check the button
-def checkButton():
-    global set, exitapp, mode
-    try:
-        if (grovepi.digitalRead(Button)):
-            print("έχετε πιέσει το κουμπί")
-            if (set == 0):
-                set = 1
-            else:
-                set = 0
-            time.sleep(.5)
-
-    except IOError:
-        print("Button Error")
-
-
 # Find out the maximum value
-def maximum(v, sensor, unit):
+def maximum(v, phenomenon, unit):
     global new_text
     max_value = max(v[0], v[1], v[2])
     print(max_value, v)
-    #print(gaia_text.max_message % (sensor, max_value, unit))
-    new_text = (gaia_text.max_message % (sensor, max_value, unit))
+    new_text = "Min {0:s}\n{1:>16s}".format(phenomenon, str(max_value) + unit)
+    setText(new_text)
     setRGB(60, 60, 60)
     for i in [0, 1, 2]:
         if v[i] == max_value:
@@ -121,12 +94,12 @@ def maximum(v, sensor, unit):
 
 
 # Find out the minimum value
-def minimum(v, sensor, unit):
+def minimum(v, phenomenon, unit):
     global pin1, pin2, new_text
     min_value = min(v[0], v[1], v[2])
     print(min_value, v)
-    #print(gaia_text.min_message % (sensor, min_value, unit))
-    new_text = (gaia_text.min_message % (sensor, min_value, unit))
+    new_text = "Min {0:s}\n{1:>16s}".format(phenomenon, str(min_value) + unit)
+    setText(new_text)
     setRGB(60, 60, 60)
     for i in [0, 1, 2]:
         if v[i] == min_value:
@@ -137,16 +110,6 @@ def minimum(v, sensor, unit):
             grovepi.digitalWrite(pin2[i], 0)
 
 
-def breakSleep(the_set):
-    global set
-    i = 0
-    while (i < 50):
-        i = i + 1
-        if (the_set != set):
-            continue
-        time.sleep(.1)
-
-
 # Close all the leds
 def closeAllLeds():
     global pin1, pin2
@@ -155,25 +118,61 @@ def closeAllLeds():
         grovepi.digitalWrite(pin2[i], 0)
 
 
+# Sleep that break on click
+def breakSleep():
+    i = 0
+    while (i < 50):
+        i += 1
+        try:
+            if (grovepi.digitalRead(button)):
+                print("Έχετε πιέσει το κουμπί")
+                time.sleep(.5)
+                break
+        except IOError:
+            print("Button Error")
+        time.sleep(.1)
+
+
+def traverseSubGroups(group_uuid):
+    _lowest = []
+    _subgroups = sparkworks.subGroups(group_uuid)
+    if len(_subgroups) == 0:
+        _lowest = group_uuid
+    else:
+        for _sg in _subgroups:
+            _lowest.append(traverseSubGroups(_sg['uuid']))
+    return _lowest
+
+
+def flatten_list(nested_list):
+    nested_list = deepcopy(nested_list)
+    while nested_list:
+        sublist = nested_list.pop(0)
+        if isinstance(sublist, list):
+            nested_list = sublist + nested_list
+        else:
+            yield sublist
+
+
 closeAllLeds()
 # Print rooms
-print("όνομα χρήστη:\n\t%s\n" % properties.username)
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
 print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
     print('\t%s' % room.decode('utf-8'))
 print('\n')
 
-
-# total Power
 sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
-
-thread = Thread(target=threaded_function, args=(10,))
-thread.start()
-
+rooms_list = traverseSubGroups(properties.uuid)
+rooms_list = list(flatten_list(rooms_list))
+rooms = []
+for room in rooms_list:
+    site = sparkworks.group(room)
+    if site['name'].encode('utf-8').strip() in properties.the_rooms:
+        rooms.append(site)
 
 def loop():
-    global new_text, temperature, humidity, set
+    global new_text, temperature, humidity
 
     # get data
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
@@ -182,30 +181,29 @@ def loop():
     getData()
 
     # minimum temperature
-    print("ελάχιστη θερμοκρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]")
-    minimum(temperature, "Temperature", "oC ")
-    setText(new_text)
-    breakSleep(set)
+    print("Ελάχιστη θερμοκρασία [μοβ,πορτοκαλί,πράσινο]")
+    minimum(temperature, "Temperature", "oC")
+    breakSleep()
 
     for i in [0, 1, 2]:
-        print("θερμοκρασία μέσος όρος: " + properties.the_rooms[i] + ": " + str(temperature[i]) + " oC")
-        new_text = ("Avg Temperature:" + str(temperature[i]) + " oC")
+        print("Μέσος όρος θερμοκρασίας: {0:s}: {1:5.1f} oC".format(properties.the_rooms[i], temperature[i]))
+        new_text = "{0:s}\n{1:>14.1f}oC".format("Avg Temperature", temperature[i])
         setText(new_text)
         setRGB(R[i], G[i], B[i])
-        breakSleep(set)
+        breakSleep()
 
     # maximum humidity
-    print("μέγιστη υγρασία μέσος όρος [μοβ,πορτοκαλί,πράσινο]")
+    print("Μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]")
     maximum(humidity, "Humidity", "%RH")
-    setText(new_text)
-    breakSleep(set)
+    breakSleep()
 
     for i in [0, 1, 2]:
-        print("υγρασία μέσος όρος: " + properties.the_rooms[i] + ": " + str(humidity[i]) + " %RH")
-        new_text = ("Avg Humidity:   " + str(humidity[i]) + " %RH")
+        print("Μέσος όρος υγρασίας: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[i], humidity[i]))
+        new_text = "{0:s}\n{1:>13.1f}%RH".format("Avg Humidity", humidity[i])
         setText(new_text)
         setRGB(R[i], G[i], B[i])
-        breakSleep(set)
+        breakSleep()
+        # time.sleep(3)
 
 
 def main():

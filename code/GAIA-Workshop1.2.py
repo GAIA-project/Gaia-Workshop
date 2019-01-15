@@ -2,31 +2,35 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
 import time
-import gaia_text
-
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
+import gaia_text
 
-pinAYellow = 2
-pinAWhite = 3
-pinBYellow = 4
-pinBWhite = 5
+# select pins for the leds
+pins = {'A': {'yellow': 2, 'white': 3},
+        'B': {'yellow': 4, 'white': 5},
+        'C': {'yellow': 6, 'white': 7}}
+
+# select colors for the rooms
+lcd_colors = [[255, 0, 255],
+              [255, 128, 0],
+              [0, 255, 0]]
 
 exitapp = False
 
-Interruptor = 0
+switch = 0
 
 # Declare the LED pins as OUTPUT
-grovepi.pinMode(pinAYellow, "OUTPUT")
-grovepi.pinMode(pinAWhite, "OUTPUT")
-grovepi.pinMode(pinBYellow, "OUTPUT")
-grovepi.pinMode(pinBWhite, "OUTPUT")
+grovepi.pinMode(pins['A']['yellow'], "OUTPUT")
+grovepi.pinMode(pins['A']['white'], "OUTPUT")
+grovepi.pinMode(pins['B']['yellow'], "OUTPUT")
+grovepi.pinMode(pins['B']['white'], "OUTPUT")
 
 # Declare the Switch pins as INPUT
-grovepi.pinMode(Interruptor, "INPUT")
+grovepi.pinMode(switch, "INPUT")
 
 # initialize the screen
 
@@ -41,35 +45,35 @@ new_text = ""
 
 
 def closeAllLeds():
-    global pinAYellow, pinAWhite, pinBYello, pinBWithe
+    global pins
     # CLose LESD A
-    grovepi.digitalWrite(pinAYellow, 0)
-    grovepi.digitalWrite(pinAWhite, 0)
+    grovepi.digitalWrite(pins['A']['yellow'], 0)
+    grovepi.digitalWrite(pins['A']['white'], 0)
     # Close LED B
-    grovepi.digitalWrite(pinBYellow, 0)
-    grovepi.digitalWrite(pinBWhite, 0)
+    grovepi.digitalWrite(pins['B']['yellow'], 0)
+    grovepi.digitalWrite(pins['B']['white'], 0)
 
 
 closeAllLeds()
 
 
 def loop():
-    global pinAYellow, pinAWhite, pinBYello, pinBWithe, new_text
-    value = grovepi.analogRead(Interruptor)
+    global pins, new_text
+    value = grovepi.analogRead(switch)
     # interruptor off
     if value < 800:
-        new_text = "All leds close"
+        new_text = "All Leds Closed"
         closeAllLeds()
     # interruptor on
     else:
-        new_text = "Leds  Open"
+        new_text = "All Leds Open"
         # open led A color blue
-        grovepi.digitalWrite(pinAYellow, 1)
-        grovepi.digitalWrite(pinAWhite, 0)
+        grovepi.digitalWrite(pins['A']['yellow'], 1)
+        grovepi.digitalWrite(pins['A']['white'], 0)
 
         # open led B color blue
-        grovepi.digitalWrite(pinBYellow, 1)
-        grovepi.digitalWrite(pinBWhite, 0)
+        grovepi.digitalWrite(pins['B']['yellow'], 1)
+        grovepi.digitalWrite(pins['B']['white'], 0)
 
 
 def main():
@@ -78,7 +82,7 @@ def main():
         loop()
         if text != new_text:
             text = new_text
-            print("settext:", text)
+            print("setText: " + text)
             setText(text)
 
 

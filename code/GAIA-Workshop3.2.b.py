@@ -2,23 +2,24 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
+import math
 import time
+from copy import deepcopy
 from threading import Thread
-import gaia_text
-import properties
-import sparkworks
-import arduino_gauge_serial as arduino_gauge
-
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
 import grovepi
 from grove_rgb_lcd import *
-import threading
-import math
+import gaia_text
+import properties
+from sparkworks import SparkWorks
+import arduino_gauge_i2c as arduino_gauge
+
 
 # select pins for the leds
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
+button = 8
 
 # select colors for the rooms
 R = [255, 255, 0]
@@ -26,68 +27,72 @@ G = [0, 128, 255]
 B = [255, 0, 0]
 
 # variables for the sensors
-humidity = [0, 0, 0]
-temperature = [0, 0, 0]
+temp = [0, 0, 0]
+humi = [0, 0, 0]
 
-# Select the pins Outputs and inputs
-Button = 8
-grovepi.pinMode(Button, "INPUT")
+opt = 0
+block_gauge = False
+text = ""
+new_text = ""
+exitapp = False
+sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 
+
+# Assign input and output pins
+grovepi.pinMode(button, "INPUT")
 for i in [0, 1, 2]:
     grovepi.pinMode(pin1[i], "OUTPUT")
     grovepi.pinMode(pin2[i], "OUTPUT")
 
-# initiliaze global variables
-set = 0
-exitapp = False
-var = 0
+arduino_gauge.connect()
+arduino_gauge.write(1, 1, 1)
+
 
 # Take new values from the data base
-def updateSiteData(site, param):
-    resource = sparkworks.siteResourceDevice(site, param)
-    latest = sparkworks.latest(resource)
+def updateSiteData(group, param):
+    resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
+    latest = sparkworks.latest(resource['uuid'])
     latest_value = float("{0:.1f}".format(float(latest["latest"])))
     return latest_value
 
 
-# Get data from
 def getData():
     for i in [0, 1, 2]:
         if not exitapp:
-            humidity[i] = updateSiteData(rooms[i], "Relative Humidity")
+            humi[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
     for i in [0, 1, 2]:
         if not exitapp:
-            temperature[i] = updateSiteData(rooms[i], "Temperature")
+            temp[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
 
 
 def threaded_function(arg):
-    global var
+    global block_gauge
+    wait = 0
     while not exitapp:
-        var=1
-        getData()
-        time.sleep(2)
-        var=0
-#       print ("Finish get data")
-        time.sleep(10)
+        if wait >= 100:
+            block_gauge = True
+            getData()
+            time.sleep(.5)
+            block_gauge = False
+            # print("Finish get data")
+            wait = 0
+        else:
+            wait += 1
+            time.sleep(.1)
 
 
-def threaded_function2(arg):
-    while not exitapp:
-        checkButton()
-
-
-def mapDItoLED(di):
+def mapDItoGauge(di):
     led = 0
     word = " "
     if di < -1.7:
         led = 1
-        word = "POLY KPIO"
+        word = "POLY KRIO"
     if -1.7 < di < 12.9:
         led = 2
-        word = "KPIO"
+        word = "KRIO"
     if 12.9 < di < 14.9:
         led = 3
-        word = "DPOSIA"
+        word = "DROSIA"
     if 15.0 < di < 19.9:
         led = 4
         word = "KANONIKO"
@@ -105,7 +110,6 @@ def mapDItoLED(di):
 
 # Close all the leds
 def closeAllLeds():
-    global pin1, pin2
     for i in [0, 1, 2]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
@@ -113,79 +117,94 @@ def closeAllLeds():
 
 # Function that check the button
 def checkButton():
-    global set, exitapp, mode
+    global opt
     try:
-        if (grovepi.digitalRead(Button)):
+        if (grovepi.digitalRead(button)):
             print("έχετε πιέσει το κουμπί")
-            if (set < 2):
-                set = set + 1
+            if (opt < 2):
+                opt = opt + 1
             else:
-                set = 0
+                opt = 0
             time.sleep(.5)
-
     except IOError:
         print("Button Error")
 
 
-def calDI(t, rh):
+def calcDI(t, rh):
     DI = t - 0.55 * (1 - 0.01 * rh) * (t - 14.5)
-    return float("{0:.2f}".format(float(DI)))
+    return float("{0:.1f}".format(float(DI)))
 
 
-print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-setText(gaia_text.loading_data)
-setRGB(50, 50, 50)
-arduino_gauge.connect()
-arduino_gauge.write(1, 1, 1)
+def traverseSubGroups(group_uuid):
+    _lowest = []
+    _subgroups = sparkworks.subGroups(group_uuid)
+    if len(_subgroups) == 0:
+        _lowest = group_uuid
+    else:
+        for _sg in _subgroups:
+            _lowest.append(traverseSubGroups(_sg['uuid']))
+    return _lowest
 
-print("όνομα χρήστη:\n\t%s\n" % properties.username)
+
+def flatten_list(nested_list):
+    nested_list = deepcopy(nested_list)
+    while nested_list:
+        sublist = nested_list.pop(0)
+        if isinstance(sublist, list):
+            nested_list = sublist + nested_list
+        else:
+            yield sublist
+
+
+closeAllLeds()
+# Print rooms
+print("Όνομα χρήστη:\n\t%s\n" % properties.username)
 print("Επιλεγμένη αίθουσα:")
 for room in properties.the_rooms:
     print('\t%s' % room.decode('utf-8'))
 print('\n')
 
-
 sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.the_rooms)
+rooms_list = traverseSubGroups(properties.uuid)
+rooms_list = list(flatten_list(rooms_list))
+rooms = []
+for room in rooms_list:
+    site = sparkworks.group(room)
+    if site['name'].encode('utf-8').strip() in properties.the_rooms:
+        rooms.append(site)
+
+print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+setText(gaia_text.loading_data)
+setRGB(50, 50, 50)
 getData()
 
 thread = Thread(target=threaded_function, args=(10,))
 thread.start()
-thread2 = Thread(target=threaded_function2, args=(10,))
-thread2.start()
-
-
-text = ""
-new_text = ""
 
 
 def loop():
-    global new_text, change, show, set, text, var
-    DI = [0, 0, 0]
-    led = [0, 0, 0]
-    word = [" ", " ", " "]
-    for i in [0, 1, 2]:
-        DI[i] = calDI(temperature[i], humidity[i])
-        m = mapDItoLED(DI[i])
-        led[i] = m[0]
-        word[i] = m[1]
-    if var==0:	
-        arduino_gauge.write(led[0], led[1], led[2])
-    new_text = ("DI: " + str(DI[set]) + "\n" + word[set])
-    setRGB(R[set], G[set], B[set])
+    global new_text, change, show, opt, text, block_gauge
+    di = [0, 0, 0]
+    di_map = [None, None, None]
+    for i in range(3):
+        di[i] = calcDI(temp[i], humi[i])
+        di_map[i] = mapDItoGauge(di[i])
+    if not block_gauge:
+        arduino_gauge.write(di_map[0][0], di_map[1][0], di_map[2][0])
+    new_text = "DI: {0:.1f}\n{1:s}".format(di[opt], di_map[opt][1])
+    setRGB(R[opt], G[opt], B[opt])
     time.sleep(.1)
     if text != new_text:
-        print(properties.the_rooms[set] + " θερμοκρασία: " + str(temperature[set]) + " Centrigrade")
-        print(properties.the_rooms[set] + " υγρασία: " + str(humidity[set]) + " %RH")
-        print(properties.the_rooms[set] + " DI: " + str(DI[set]) + " " + word[set])
+        print("Θερμοκρασία: {0:s}: {1:5.1f} oC ".format(properties.the_rooms[opt], temp[opt]))
+        print("    Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[opt], humi[opt]))
+        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[opt], di[opt], di_map[opt][1]))
         text = new_text
         setText(text)
 
 
 def main():
-    global new_text, text, set
     while not exitapp:
-        # checkButton()
+        checkButton()
         loop()
 
 
