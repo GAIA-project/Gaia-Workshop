@@ -13,7 +13,7 @@ import grovepi
 from grove_rgb_lcd import *
 import gaia_text
 import properties
-from sparkworks_v2 import SparkWorks
+from sparkworks import SparkWorks
 
 
 # select pins for the leds
