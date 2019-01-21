@@ -3,103 +3,92 @@
 import os
 import sys
 import time
+from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
-from grove_rgb_lcd import *
+import grove_rgb_lcd as grovelcd
 import gaia_text
 import properties
 from sparkworks import SparkWorks
 
-
-# select pins for the leds
+# Select pins for the leds and buttons
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
 button = 8
 
-# select colors for the rooms
+# Colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-# variables for the sensors
+# Variables for the sensors
+rooms = None
 humidity = [0, 0, 0]
 temperature = [0, 0, 0]
 
-text = ""
-new_text = ""
+# Other global variables
+thread = None
 exitapp = False
-sparkworks = SparkWorks(properties.client_id, properties.client_secret)
-
-# Assign input and output pins
-grovepi.pinMode(button, "INPUT")
-for i in [0, 1, 2]:
-    grovepi.pinMode(pin1[i], "OUTPUT")
-    grovepi.pinMode(pin2[i], "OUTPUT")
+sparkworks = None
 
 
-# Take new values from the data base
+# Update values from the database
 def updateSiteData(group, param):
     resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
     latest = sparkworks.latest(resource['uuid'])
-    latest_value = float("{0:.1f}".format(float(latest["latest"])))
-    return latest_value
+    value = latest["latest"]
+    return round(value, 1)
 
 
+# Get data from database
 def getData():
     for i in [0, 1, 2]:
         if not exitapp:
-            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
-    for i in [0, 1, 2]:
-        if not exitapp:
             temperature[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
+            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+
+
+def threaded_function(sleep):
+    i = sleep * 10
+    while not exitapp:
+        if i == 0:
+            getData()
+            i = sleep
+        time.sleep(.1)
+        i -= 1
 
 
 # Find out the maximum value
-def maximum(v, phenomenon, unit):
-    global new_text
-    max_value = max(v[0], v[1], v[2])
-    print(max_value, v)
-    new_text = "Min {0:s}\n{1:>16s}".format(phenomenon, str(max_value) + unit)
-    setText(new_text)
-    setRGB(60, 60, 60)
+def showMaximum(values):
+    max_value = max(values)
     for i in [0, 1, 2]:
-        if v[i] == max_value:
+        if values[i] == max_value:
             grovepi.digitalWrite(pin1[i], 0)
             grovepi.digitalWrite(pin2[i], 1)
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return max_value
 
 
 # Find out the minimum value
-def minimum(v, phenomenon, unit):
-    global pin1, pin2, new_text
-    min_value = min(v[0], v[1], v[2])
-    print(min_value, v)
-    new_text = "Min {0:s}\n{1:>16s}".format(phenomenon, str(min_value) + unit)
-    setText(new_text)
-    setRGB(60, 60, 60)
+def showMinimum(values):
+    min_value = min(values)
     for i in [0, 1, 2]:
-        if v[i] == min_value:
+        if values[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
             grovepi.digitalWrite(pin2[i], 1)
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
-
-
-# Close all the leds
-def closeAllLeds():
-    for i in [0, 1, 2]:
-        grovepi.digitalWrite(pin1[i], 0)
-        grovepi.digitalWrite(pin2[i], 0)
+    return min_value
 
 
 # Sleep that break on click
-def breakSleep():
+def breakSleep(interval):
     i = 0
-    while (i < 50):
+    while (i < interval):
         i += 1
         try:
             if (grovepi.digitalRead(button)):
@@ -111,77 +100,77 @@ def breakSleep():
         time.sleep(.1)
 
 
-def traverseSubGroups(group):
-    _bottom = []
-    _subgroups = sparkworks.subGroups(group['uuid'])
-    if len(_subgroups) == 0:
-        _bottom.append(group)
-    else:
-        for _subgroup in _subgroups:
-            _list = traverseSubGroups(_subgroup)
-            for _item in _list:
-                _bottom.append(_item)
-    return _bottom
+# Close all the leds
+def closeLeds():
+    for i in [0, 1, 2]:
+        grovepi.digitalWrite(pin1[i], 0)
+        grovepi.digitalWrite(pin2[i], 0)
 
 
-def selectRooms(site, local):
-    _rooms = []
-    for _local in local:
-        for _site in site:
-            if _site['name'].encode('utf-8').strip() == _local.strip():
-                _rooms.append(_site)
-    return _rooms
+def setup():
+    global sparkworks, rooms, thread
+    grovepi.pinMode(button, "INPUT")
+    for i in [0, 1, 2]:
+        grovepi.pinMode(pin1[i], "OUTPUT")
+        grovepi.pinMode(pin2[i], "OUTPUT")
+    closeLeds()
+    grovelcd.setRGB(0, 0, 0)
+    grovelcd.setText("")
 
+    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Επιλεγμένες αίθουσες:")
+    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+    sparkworks.connect(properties.username, properties.password)
+    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}".format(room['name'].encode('utf-8')))
+    print("\n")
 
-closeAllLeds()
-# Print rooms
-print("Όνομα χρήστη:\n\t%s\n" % properties.username)
-print("Επιλεγμένη αίθουσα:")
-for room in properties.the_rooms:
-    print('\t%s' % room.decode('utf-8'))
-print('\n')
+    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+    grovelcd.setRGB(50, 50, 50)
+    grovelcd.setText(gaia_text.loading_data)
+    getData()
 
-sparkworks.connect(properties.username, properties.password)
-site_rooms = traverseSubGroups(sparkworks.group(properties.uuid))
-rooms = selectRooms(site_rooms, properties.the_rooms)
+    thread = Thread(target=threaded_function, args=(10,))
+    thread.start()
 
 
 def loop():
-    global new_text, temperature, humidity
-
-    # get data
-    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-    setText(gaia_text.loading_data)
-    setRGB(50, 50, 50)
-    getData()
-
     # minimum temperature
+    minimum = showMinimum(temperature)
     print("Ελάχιστη θερμοκρασία [μοβ,πορτοκαλί,πράσινο]")
-    minimum(temperature, "Temperature", "oC")
-    breakSleep()
+    print("{0:^20.1f} {1:s}".format(minimum, str(temperature)))
+    new_text = "Min {0:s}\n{1:>14.1f}oC".format("Temperature", minimum)
+    grovelcd.setRGB(60, 60, 60)
+    grovelcd.setText(new_text)
+    breakSleep(50)
 
     for i in [0, 1, 2]:
         print("Θερμοκρασία: {0:s}: {1:5.1f} oC".format(properties.the_rooms[i], temperature[i]))
         new_text = "{0:s}\n{1:>14.1f}oC".format("Temperature", temperature[i])
-        setText(new_text)
-        setRGB(R[i], G[i], B[i])
-        breakSleep()
+        grovelcd.setRGB(R[i], G[i], B[i])
+        grovelcd.setText(new_text)
+        breakSleep(50)
 
     # maximum humidity
+    maximum = showMaximum(humidity)
     print("Μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]")
-    maximum(humidity, "Humidity", "%RH")
-    breakSleep()
+    print("{0:^15.1f} {1:s}".format(maximum, str(humidity)))
+    new_text = "Max {0:s}\n{1:>13s}%RH".format("Humidity", str(maximum))
+    grovelcd.setRGB(60, 60, 60)
+    grovelcd.setText(new_text)
+    breakSleep(50)
 
     for i in [0, 1, 2]:
         print("Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[i], humidity[i]))
         new_text = "{0:s}\n{1:>13.1f}%RH".format("Humidity", humidity[i])
-        setText(new_text)
-        setRGB(R[i], G[i], B[i])
-        breakSleep()
-        # time.sleep(3)
+        grovelcd.setRGB(R[i], G[i], B[i])
+        grovelcd.setText(new_text)
+        breakSleep(50)
 
 
 def main():
+    setup()
     while not exitapp:
         loop()
 

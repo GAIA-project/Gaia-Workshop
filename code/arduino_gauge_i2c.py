@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-import time,sys
+import sys
+import time
 
 if sys.platform == 'uwp':
     import winrt_smbus as smbus
@@ -17,14 +18,14 @@ ARDUINO_GAUGE_ADDR = 0x2D
 
 
 def connect():
-    time.sleep(3)
+    time.sleep(1)
     return True
 
 
 def write(a, b, c):
-    _a = ord(hex(int(a))[-1])
-    _b = ord(hex(int(b))[-1])
-    _c = ord(hex(int(c))[-1])
+    _a = ord('{0:X}'.format(a))
+    _b = ord('{0:X}'.format(b))
+    _c = ord('{0:X}'.format(c))
     if __name__ == '__main__':
         print(chr(_a), chr(_b), chr(_c))
     data = [_a, _b, _c, ord('\n')]

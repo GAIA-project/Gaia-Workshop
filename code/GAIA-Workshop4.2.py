@@ -2,170 +2,164 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-
-sys.path.append(os.getcwd())
-
-from threading import Thread
+import math
 import time
-
+import datetime
+sys.path.append(os.getcwd())
+sys.dont_write_bytecode = True
+import grovepi
+import grove_rgb_lcd as grovelcd
 import gaia_text
 import properties
-import sparkworks
-import grovepi
-from grove_rgb_lcd import *
-import math
+from sparkworks import SparkWorks
+import arduino_gauge_i2c as arduino_gauge
 
-import arduino_gauge_serial as arduino_gauge
-import datetime
-exitapp = False
-current = [0, 0, 0]
-power_consumption = [0, 0, 0]
-maximum = [0, 0, 0, 0]
-timestamp = 0
+# Select pins for the leds and buttons
+button = 8
+button2 = 7
 
-main_site = None
-phases = []
-total_power = None
-
+# Colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
-text = ""
-new_text = ""
 
-ButtonH = 8
-ButtonPh = 7
-grovepi.pinMode(ButtonH, "INPUT")
-grovepi.pinMode(ButtonPh, "INPUT")
+# Variables for the sensors
+phases = None
+current = [0, 0, 0]
+power = [0, 0, 0]
+max_power = [0, 0, 0]
+timestamp = None
 
-text = gaia_text.loading_data
-setText(text)
+# Other global variables
+time_idx = None
+time_idx_changed = False
+phase_idx = -1
+phase_idx_changed = False
+thread = None
+exitapp = False
+sparkworks = None
 
-setRGB(60, 60, 60)
 
-
+# Update values from the database
 def updateData(resource):
     global timestamp
-    summary = sparkworks.summary(resource)
-    global maximum
-    val = summary["minutes60"]
+    summary = sparkworks.summary(resource['uuid'])
+    values = summary["minutes60"]
     timestamp = summary["latestTime"]
-    # print time
-    val_max = max(summary["minutes60"])
-    return (val, float("{0:.1f}".format(float(val_max))))
+    maximum = max(summary["minutes60"])
+    return (values, round(maximum, 1))
 
 
+# Get data from database
 def getData():
-    global phases, maximum, current, power_consumption
     for i in [0, 1, 2]:
         if not exitapp:
             data = updateData(phases[i])
-            maximum[i] = data[1] * 230 / 1000
-            current[i] = data[0]
-            power_consumption[i] = current[i]
+            current[i] = [d/1000 for d in data[0]]
+            power[i] = [d*230/1000 for d in data[0]]
+            max_power[i] = data[1] * 230 / 1000
 
 
-print("Username: \n\t{0:s}\n".format(properties.username))
-print("Sensors:")
-
-arduino_gauge.connect()
-arduino_gauge.write(1, 2, 3)
-
-# sparkworks.connect(properties.username, properties.password)
-# for room in properties.the_power_room:
-#    print '\t%s' % room.decode('utf-8')
-
-# total Power
-sparkworks.connect(properties.username, properties.password)
-main_site = sparkworks.main_site()
-phases = sparkworks.current_phases(main_site)
+def map_value_to_leds(value, max, leds_available):
+    step = max / leds_available
+    # num_leds = math.ceil(value/step)
+    num_leds = round(value/step)
+    return int(num_leds)
 
 
-print("\t%s" % phases[0]["uri"])
-print("\t%s" % phases[1]["uri"])
-print("\t%s" % phases[2]["uri"])
+def setup():
+    global sparkworks, phases
+    grovepi.pinMode(button, "INPUT")
+    grovepi.pinMode(button2, "INPUT")
+    grovelcd.setRGB(0, 0, 0)
+    grovelcd.setText("")
+    arduino_gauge.connect()
+    arduino_gauge.write(1, 1, 1)
+
+    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Επιλεγμένοι αισθητήρες:")
+    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+    sparkworks.connect(properties.username, properties.password)
+    phases = sparkworks.current_phases(properties.uuid)
+    for phase in phases:
+        print("\t{0:s}".format(phase['systemName']))
+    print("\n")
 
 
-new_text = "Click button to start!"
+def loop():
+    global time_idx, phase_idx, time_idx_changed, phase_idx_changed
+    # Detect button used for selecting hours
+    try:
+        if (grovepi.digitalRead(button)):
+            print("Προηγούμενη ώρα")
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText("Previous Hour")
+            time_idx += 1
+            if time_idx >= 48:
+                time_idx = None
+                grovelcd.setText("Starting over...")
+            time_idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    # Detect button used for selecting phases
+    try:
+        if (grovepi.digitalRead(button2)):
+            print("Επόμενη φάση")
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText("Next Phase")
+            phase_idx += 1
+            if phase_idx >= 3:
+                phase_idx = -1
+            phase_idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
 
+    if time_idx is None:
+        print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+        grovelcd.setRGB(50, 50, 50)
+        grovelcd.setText(gaia_text.loading_data)
+        getData()
+        time_idx = 0
+        time_idx_changed = True
 
-def map_value_to_leds(m, val, leds_available):
-    if val == 0:
-        return 0
-    steap = m / leds_available
-    mod = val / steap + 1
-    return math.floor(mod)
+    # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
+    if time_idx_changed or phase_idx_changed:
+        phase_idx_changed = False
+
+        timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(time_idx))
+        strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
+        strtime = timevalue.strftime('%H:%M')
+
+        # Print to terminal
+        if time_idx_changed:
+            time_idx_changed = False
+            open_leds = [0, 0, 0]
+            basemax = max(max_power)
+            print("Ημερομηνία: {0:s}".format(strdate))
+            msg = "{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
+            for i in [0, 1, 2]:
+                print(msg.format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
+                open_leds[i] = map_value_to_leds(power[i][time_idx], basemax, 12)
+            arduino_gauge.write(*open_leds)
+
+        # Print to LCD
+        if phase_idx == -1:
+            total = sum(p[time_idx] for p in power)
+            new_text = "{0:s}\n{1:>15.2f}W".format(strtime, total)
+            grovelcd.setRGB(60, 60, 60)
+        else:
+            new_text = "Phase: {0:d}\n{1:>15.2f}W".format(phase_idx+1, power[phase_idx][time_idx])
+            grovelcd.setRGB(R[phase_idx], G[phase_idx], B[phase_idx])
+        grovelcd.setText(new_text)
+    # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
 
 def main():
-    global text, new_text, dev, ph, timestamp, power_consumption
-    time.sleep(1)
-    led = [0, 0, 0]
-    led_part = [0, 0, 0]
-    t = 0
-    ph = 0
-    new_t = 0
+    setup()
     while not exitapp:
-        # detect Button that choose houre
-        try:
-            if (grovepi.digitalRead(ButtonH)):
-                setText("New Hour")
-                t = t + 1
-                if t == 47:
-                    setText("Take new data")
-                    t = 0
-                time.sleep(.5)
-                print("hour" + str(t))
-        except IOError:
-            print("Button Error")
-        # detect button that choose phase
-        try:
-            if (grovepi.digitalRead(ButtonPh)):
-                setText("Click...")
-                ph = ph + 1
-                if ph >= 4:
-                    ph = 0
-                print("Ph" + str(ph))
-                time.sleep(.5)
-        except IOError:
-            print("Button Error")
-
-        # Show Total Power (dev=0)
-        if t == 0:
-            getData()
-            basemax = max(maximum[0], maximum[1], maximum[2])
-            new_text = "Getting data..."
-            t = 1
-        else:
-            # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
-            if new_t != t:
-                new_t = t
-                p = power_consumption[0][t - 1] + power_consumption[1][t - 1] + power_consumption[2][t - 1]
-
-                timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (t - 1))
-                strtime = timevalue.strftime('%Y-%m-%d %H:%M')
-                print(strtime)
-
-                for i in [0, 1, 2]:
-                    msg = "{0:s} Current: {1:.2f} A, Power: {2:.2f} W"
-                    print(msg.format(phases[i]["uri"], current[i][t-1]/1000, power_consumption[i][t-1]*230/1000))
-                    led[i] = map_value_to_leds(basemax, power_consumption[i][t - 1] * 230 / 1000, 11)
-                    print(led[i])
-                    time.sleep(.1)
-                arduino_gauge.write(led[0], led[1], led[2])
-
-            if ph == 0:
-                new_text = "{0:s}\n{1:>15.2f}W".format(strtime, p*230/1000)
-                setRGB(60, 60, 60)
-            else:
-                new_text = "Phase: {0:d}\n{1:>15.2f}W".format(ph, power_consumption[ph-1][t-1]*230/1000)
-                setRGB(R[ph - 1], G[ph - 1], B[ph - 1])
-            # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
-
-        if text != new_text:
-            text = new_text
-            print("LCD show: " + text)
-            setText(text)
+        loop()
 
 
 try:

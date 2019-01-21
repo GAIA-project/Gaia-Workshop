@@ -5,70 +5,64 @@ import sys
 import math
 import time
 import datetime
-from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
-from grove_rgb_lcd import *
+import grove_rgb_lcd as grovelcd
 import gaia_text
 import properties
 from sparkworks import SparkWorks
 
-
-# select pins for the leds
+# Select pins for the leds and buttons
 pin1 = [2, 4]
 pin2 = [3, 5]
-button1 = 8
+button = 8
 button2 = 7
 
-# select colors for the rooms
+# Colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-# variables for the sensors
-temp = [0, 0, 0]
-humi = [0, 0, 0]
+# Variables for the sensors
+rooms = None
+temperature = [0, 0]
+humidity = [0, 0]
+timestamp = None
 
+# Other global variables
 time_idx = None
 time_idx_changed = False
 room_idx = 0
 room_idx_changed = False
-timestamp = None
+thread = None
 exitapp = False
-sparkworks = SparkWorks(properties.client_id, properties.client_secret)
-
-# Assign input and output pins
-grovepi.pinMode(button1, "INPUT")
-grovepi.pinMode(button2, "INPUT")
-for i in [0, 1]:
-    grovepi.pinMode(pin1[i], "OUTPUT")
-    grovepi.pinMode(pin2[i], "OUTPUT")
+sparkworks = None
 
 
-# Take new values from the database
+# Update values from the database
 def updateData(group, param):
     global timestamp
     resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
     summary = sparkworks.summary(resource['uuid'])
-    val = summary["minutes60"]
+    values = summary["minutes60"]
     timestamp = summary["latestTime"]
-    return val
+    return values
 
 
+# Get data from database
 def getSensorData():
-    # global temperature, humidity
     if not exitapp:
-        for i in[0, 1]:
-            temp[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
-            humi[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+        for i in [0, 1]:
+            temperature[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
+            humidity[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
 
 
 # Find out the minimum value
-def minimum(v):
-    min_value = min(v[0], v[1])
+def showMinimum(values):
+    min_value = min(values)
     for i in [0, 1]:
-        if v[i] == min_value:
+        if values[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
             grovepi.digitalWrite(pin2[i], 1)
         else:
@@ -77,108 +71,99 @@ def minimum(v):
 
 
 # Close all the leds
-def closeAllLeds():
+def closeLeds():
     for i in [0, 1]:
         grovepi.digitalWrite(pin1[i], 0)
         grovepi.digitalWrite(pin2[i], 0)
 
 
-def traverseSubGroups(group):
-    _bottom = []
-    _subgroups = sparkworks.subGroups(group['uuid'])
-    if len(_subgroups) == 0:
-        _bottom.append(group)
-    else:
-        for _subgroup in _subgroups:
-            _list = traverseSubGroups(_subgroup)
-            for _item in _list:
-                _bottom.append(_item)
-    return _bottom
+def setup():
+    global sparkworks, rooms
+    grovepi.pinMode(button, "INPUT")
+    grovepi.pinMode(button2, "INPUT")
+    for i in [0, 1]:
+        grovepi.pinMode(pin1[i], "OUTPUT")
+        grovepi.pinMode(pin2[i], "OUTPUT")
+    closeLeds()
+    grovelcd.setRGB(0, 0, 0)
+    grovelcd.setText("")
 
-
-def selectRooms(site, local):
-    _rooms = []
-    for _local in local:
-        for _site in site:
-            if _site['name'].encode('utf-8').strip() == _local.strip():
-                _rooms.append(_site)
-    return _rooms
-
-
-closeAllLeds()
-# Print rooms
-print("Όνομα χρήστη:\n\t%s\n" % properties.username)
-print("Επιλεγμένη αίθουσα:")
-for room in properties.the_rooms:
-    print('\t%s' % room.decode('utf-8'))
-print('\n')
-
-sparkworks.connect(properties.username, properties.password)
-site_rooms = traverseSubGroups(sparkworks.group(properties.uuid))
-rooms = selectRooms(site_rooms, properties.the_rooms)
+    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Επιλεγμένες αίθουσες:")
+    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+    sparkworks.connect(properties.username, properties.password)
+    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}".format(room['name'].encode('utf-8')))
+    print("\n")
 
 
 def loop():
     global time_idx, room_idx, time_idx_changed, room_idx_changed
     # Detect button used for selecting hours
     try:
-        if (grovepi.digitalRead(button1)):
-            print("Νέα ώρα")
-            setText("New Hour")
-            setRGB(50, 50, 50)
+        if (grovepi.digitalRead(button)):
+            print("Προηγούμενη ώρα")
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText("Previous Hour")
             time_idx += 1
             if time_idx >= 48:
                 time_idx = None
+                grovelcd.setText("Starting over...")
             time_idx_changed = True
-            time.sleep(1)
+            time.sleep(.5)
     except IOError:
         print("Button Error")
     # Detect button used for selecting rooms
     try:
         if (grovepi.digitalRead(button2)):
-            print("Νέα αίθουσα")
-            setText("New Room")
-            setRGB(50, 50, 50)
+            print("Επόμενη αίθουσα")
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText("Next Room")
             room_idx += 1
             if room_idx >= 2:
                 room_idx = 0
             room_idx_changed = True
-            time.sleep(1)
+            time.sleep(.5)
     except IOError:
         print("Button Error")
 
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-        setText(gaia_text.loading_data)
-        setRGB(50, 50, 50)
+        grovelcd.setRGB(50, 50, 50)
+        grovelcd.setText(gaia_text.loading_data)
         getSensorData()
         time_idx = 0
         time_idx_changed = True
 
+    # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
     if time_idx_changed or room_idx_changed:
         room_idx_changed = False
         time_idx_changed = False
-        timevalue = datetime.datetime.fromtimestamp((timestamp / 1000.0) - 3600 * (time_idx))
+
+        timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(time_idx))
         strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
         strtime = timevalue.strftime('%H:%M')
 
         # Print to terminal
         print(" Ημερομηνία: {0:s}".format(strdate))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], temp[room_idx][time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], humi[room_idx][time_idx]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
 
         # Print to LCD
-        str_temp = "T:{0:.1f} oC".format(temp[room_idx][time_idx]).rjust(16 - len(strtime))
-        str_humi = "H:{0:.1f}%RH".format(humi[room_idx][time_idx]).rjust(16)
-        new_text = strtime + str_temp + str_humi
-        setRGB(R[room_idx], G[room_idx], B[room_idx])
-        setText(new_text)
+        str_temperature = "T:{0:.1f} oC".format(temperature[room_idx][time_idx]).rjust(16 - len(strtime))
+        str_humidity = "H:{0:.1f}%RH".format(humidity[room_idx][time_idx]).rjust(16)
+        new_text = strtime + str_temperature + str_humidity
+        grovelcd.setRGB(R[room_idx], G[room_idx], B[room_idx])
+        grovelcd.setText(new_text)
 
-        # Show red the classroom with minimum temperature
-        minimum([temp[0][time_idx], temp[1][time_idx]])
+        # Show with red the classroom with minimum temperature
+        showMinimum([temp[time_idx] for temp in temperature])
+    # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
 
 def main():
+    setup()
     while not exitapp:
         loop()
 

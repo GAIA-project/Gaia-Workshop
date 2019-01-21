@@ -13,6 +13,8 @@ class SparkWorks:
     GAIA_CONST = "gaia-"
     DEV_CONST_XBEE = "00"
     DEV_CONST_LORA = "dragino-"
+    SELECTION_DEPTH = 1
+    SELECTION_DEPTH_MAX = 10
 
     __api_url = "https://api.sparkworks.net"
     __sso_url = "https://sso.sparkworks.net/aa/oauth/token"
@@ -67,16 +69,31 @@ class SparkWorks:
             response = self.apiGetAuthorized('/v2/group/' + uuid)
             return response.json()
 
-    def subGroups(self, group_uuid):
-        response = self.apiGetAuthorized('/v2/group/' + group_uuid + '/subgroup/1')
+    def subGroups(self, group_uuid, depth=SELECTION_DEPTH):
+        response = self.apiGetAuthorized('/v2/group/' + group_uuid + '/subgroup/' + str(depth))
         return response.json()
 
-    def select_rooms(self, group_uuid, room_names):
+    def select_rooms(self, group_uuid, room_names, max_depth=SELECTION_DEPTH_MAX, sort=True):
         _rooms = []
-        for room_name in room_names:
-            for site in self.subGroups(group_uuid):
-                if site[self.NAME_CONST].encode('utf-8').strip() == room_name.strip():
-                    _rooms.append(site)
+        _depth = self.SELECTION_DEPTH
+        # Convert to unicode and strip so we don't have to do it twice below
+        room_names = [r.decode('utf-8').strip() for r in room_names]
+        while len(_rooms) != len(room_names) and _depth <= max_depth:
+            _subgroups = self.subGroups(group_uuid, _depth)
+            _depth += 1
+            for _subgroup in _subgroups:
+                # Strip group name and replace it for match and sort to work on malformed group names
+                _subgroup[self.NAME_CONST] = _subgroup[self.NAME_CONST].strip()
+                _is_match = _subgroup[self.NAME_CONST] in room_names
+                _is_present = _subgroup in _rooms
+                if _is_match and not _is_present:
+                    _rooms.append(_subgroup)
+        if sort is True:
+            # To remember why and what I did here.
+            # Since I am adjusting depth, the room list might not be ordered properly if
+            # the rooms are in different level subgroups. For that reason I am ordering the
+            # returned list of dicts by the name of the room and its index in the room_names list
+            _rooms = sorted(_rooms, key=lambda room: room_names.index(room[self.NAME_CONST]))
         return _rooms
 
     def phenomena(self):

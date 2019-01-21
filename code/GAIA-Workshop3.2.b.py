@@ -2,85 +2,79 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
-import math
 import time
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
-from grove_rgb_lcd import *
+import grove_rgb_lcd as grovelcd
 import gaia_text
 import properties
 from sparkworks import SparkWorks
 import arduino_gauge_i2c as arduino_gauge
 
-
-# select pins for the leds
+# Select pins for the leds and buttons
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
 button = 8
 
-# select colors for the rooms
+# Colors for the rooms
 R = [255, 255, 0]
 G = [0, 128, 255]
 B = [255, 0, 0]
 
-# variables for the sensors
-temp = [0, 0, 0]
-humi = [0, 0, 0]
+# Variables for the sensors
+rooms = None
+temperature = [0, 0, 0]
+humidity = [0, 0, 0]
 
-opt = 0
-block_gauge = False
-text = ""
-new_text = ""
+# Other global variables
+option_idx = 0
+option_idx_changed = True
+thread = None
 exitapp = False
-sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+sparkworks = None
 
 
-# Assign input and output pins
-grovepi.pinMode(button, "INPUT")
-for i in [0, 1, 2]:
-    grovepi.pinMode(pin1[i], "OUTPUT")
-    grovepi.pinMode(pin2[i], "OUTPUT")
-
-arduino_gauge.connect()
-arduino_gauge.write(1, 1, 1)
-
-
-# Take new values from the data base
+# Update values from the database
 def updateSiteData(group, param):
     resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
     latest = sparkworks.latest(resource['uuid'])
-    latest_value = float("{0:.1f}".format(float(latest["latest"])))
-    return latest_value
+    value = latest["latest"]
+    return round(value, 1)
 
 
+# Get data from database
 def getData():
     for i in [0, 1, 2]:
         if not exitapp:
-            humi[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
-    for i in [0, 1, 2]:
-        if not exitapp:
-            temp[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
+            temperature[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
+            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
 
 
-def threaded_function(arg):
-    global block_gauge
-    wait = 0
+def threaded_function(sleep):
+    i = sleep * 10
     while not exitapp:
-        if wait >= 100:
-            block_gauge = True
+        if i == 0:
             getData()
-            time.sleep(.5)
-            block_gauge = False
-            # print("Finish get data")
-            wait = 0
-        else:
-            wait += 1
-            time.sleep(.1)
+            i = sleep
+        time.sleep(.1)
+        i -= 1
 
 
-def mapDItoGauge(di):
+# Close all the leds
+def closeLeds():
+    for i in [0, 1, 2]:
+        grovepi.digitalWrite(pin1[i], 0)
+        grovepi.digitalWrite(pin2[i], 0)
+
+
+def calcDI(t, rh):
+    di = t - 0.55 * (1 - 0.01 * rh) * (t - 14.5)
+    return round(di, 1)
+
+
+def map_di_to_leds(di):
     led = 0
     word = " "
     if di < -1.7:
@@ -107,99 +101,83 @@ def mapDItoGauge(di):
     return led, word
 
 
-# Close all the leds
-def closeAllLeds():
+def setup():
+    global sparkworks, rooms, thread
+    grovepi.pinMode(button, "INPUT")
     for i in [0, 1, 2]:
-        grovepi.digitalWrite(pin1[i], 0)
-        grovepi.digitalWrite(pin2[i], 0)
+        grovepi.pinMode(pin1[i], "OUTPUT")
+        grovepi.pinMode(pin2[i], "OUTPUT")
+    closeLeds()
+    grovelcd.setRGB(0, 0, 0)
+    grovelcd.setText("")
+    arduino_gauge.connect()
+    arduino_gauge.write(1, 1, 1)
+
+    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Επιλεγμένες αίθουσες:")
+    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+    sparkworks.connect(properties.username, properties.password)
+    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}".format(room['name'].encode('utf-8')))
+    print("\n")
+
+    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+    grovelcd.setRGB(50, 50, 50)
+    grovelcd.setText(gaia_text.loading_data)
+    getData()
+
+    thread = Thread(target=threaded_function, args=(10,))
+    thread.start()
 
 
-# Function that check the button
-def checkButton():
-    global opt
+def loop():
+    global option_idx, option_idx_changed
+    # Detect button used for selecting operation
     try:
         if (grovepi.digitalRead(button)):
-            print("έχετε πιέσει το κουμπί")
-            if (opt < 2):
-                opt = opt + 1
-            else:
-                opt = 0
+            print("Επόμενη αίθουσα")
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText("Next Room")
+            option_idx += 1
+            if option_idx >= 3:
+                option_idx = 0
+                grovelcd.setText("Starting over...")
+            option_idx_changed = True
             time.sleep(.5)
     except IOError:
         print("Button Error")
 
+    # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
+    if option_idx_changed:
+        option_idx_changed = False
 
-def calcDI(t, rh):
-    DI = t - 0.55 * (1 - 0.01 * rh) * (t - 14.5)
-    return float("{0:.1f}".format(float(DI)))
-
-
-def traverseSubGroups(group):
-    _bottom = []
-    _subgroups = sparkworks.subGroups(group['uuid'])
-    if len(_subgroups) == 0:
-        _bottom.append(group)
-    else:
-        for _subgroup in _subgroups:
-            _list = traverseSubGroups(_subgroup)
-            for _item in _list:
-                _bottom.append(_item)
-    return _bottom
-
-
-def selectRooms(site, local):
-    _rooms = []
-    for _local in local:
-        for _site in site:
-            if _site['name'].encode('utf-8').strip() == _local.strip():
-                _rooms.append(_site)
-    return _rooms
-
-
-closeAllLeds()
-# Print rooms
-print("Όνομα χρήστη:\n\t%s\n" % properties.username)
-print("Επιλεγμένη αίθουσα:")
-for room in properties.the_rooms:
-    print('\t%s' % room.decode('utf-8'))
-print('\n')
-
-sparkworks.connect(properties.username, properties.password)
-site_rooms = traverseSubGroups(sparkworks.group(properties.uuid))
-rooms = selectRooms(site_rooms, properties.the_rooms)
-
-print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-setText(gaia_text.loading_data)
-setRGB(50, 50, 50)
-getData()
-
-thread = Thread(target=threaded_function, args=(10,))
-thread.start()
-
-
-def loop():
-    global new_text, change, show, opt, text, block_gauge
-    di = [0, 0, 0]
-    di_map = [None, None, None]
-    for i in range(3):
-        di[i] = calcDI(temp[i], humi[i])
-        di_map[i] = mapDItoGauge(di[i])
-    if not block_gauge:
+        di = [0, 0, 0]
+        di_map = [None, None, None]
+        for i in [0, 1, 2]:
+            di[i] = calcDI(temperature[i], humidity[i])
+            di_map[i] = map_di_to_leds(di[i])
         arduino_gauge.write(di_map[0][0], di_map[1][0], di_map[2][0])
-    new_text = "DI: {0:.1f}\n{1:s}".format(di[opt], di_map[opt][1])
-    setRGB(R[opt], G[opt], B[opt])
-    time.sleep(.1)
-    if text != new_text:
-        print("Θερμοκρασία: {0:s}: {1:5.1f} oC ".format(properties.the_rooms[opt], temp[opt]))
-        print("    Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[opt], humi[opt]))
-        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[opt], di[opt], di_map[opt][1]))
-        text = new_text
-        setText(text)
+
+        # Print to terminal
+        print("Θερμοκρασία: {0:s}: {1:5.1f} oC ".format(properties.the_rooms[option_idx], temperature[option_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[option_idx], humidity[option_idx]))
+        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[option_idx], di[option_idx], di_map[option_idx][1]))
+
+        # Print to LCD
+        lcd_temp = "{0:4.1f}oC".format(temperature[option_idx])
+        lcd_di = "DI:{0:4.1f}".format(di[option_idx]).rjust(16-len(lcd_temp))
+        lcd_hum = "{0:4.1f}%RH".format(humidity[option_idx])
+        lcd_di2 = "{0:s}".format(di_map[option_idx][1]).rjust(16-len(lcd_hum))
+        new_text = lcd_temp + lcd_di + lcd_hum + lcd_di2
+        grovelcd.setRGB(R[option_idx], G[option_idx], B[option_idx])
+        grovelcd.setText(new_text)
+    # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
 
 def main():
+    setup()
     while not exitapp:
-        checkButton()
         loop()
 
 
