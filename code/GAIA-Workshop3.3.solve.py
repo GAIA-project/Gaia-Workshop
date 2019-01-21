@@ -53,10 +53,24 @@ def updateData(group, param):
 
 # Get data from database
 def getSensorData():
-    if not exitapp:
-        for i in [0, 1]:
+    for i in [0, 1]:
+        if not exitapp:
             temperature[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
             humidity[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+
+
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
 
 
 # Find out the minimum value
@@ -69,6 +83,7 @@ def showMinimum(values):
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return min_value
 
 
 # Close all the leds
@@ -83,7 +98,7 @@ def calcDI(t, rh):
     return round(di, 1)
 
 
-def map_di_to_leds(di):
+def mapDiToLeds(di):
     led = 0
     word = " "
     if di < -1.7:
@@ -135,34 +150,6 @@ def setup():
 
 def loop():
     global time_idx, room_idx, time_idx_changed, room_idx_changed
-    # Detect button used for selecting hours
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Προηγούμενη ώρα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Previous Hour")
-            time_idx += 1
-            if time_idx >= 48:
-                time_idx = None
-                grovelcd.setText("Starting over...")
-            time_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-    # Detect button used for selecting rooms
-    try:
-        if (grovepi.digitalRead(button2)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            room_idx += 1
-            if room_idx >= 2:
-                room_idx = 0
-            room_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         grovelcd.setRGB(50, 50, 50)
@@ -185,7 +172,7 @@ def loop():
         di_map = [None, None]
         for i in [0, 1]:
             di[i] = calcDI(temperature[i][time_idx], humidity[i][time_idx])
-            di_map[i] = map_di_to_leds(di[i])
+            di_map[i] = mapDiToLeds(di[i])
         arduino_gauge.write(di_map[0][0], di_map[1][0], 0)
 
         # Print to terminal
@@ -204,6 +191,10 @@ def loop():
         # Show with red the classroom with minimum DI
         showMinimum(di)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    time_idx, time_idx_changed = checkButton(button, time_idx, None, 48)
+    room_idx, room_idx_changed = checkButton(button2, room_idx, 0, 2)
 
 
 def main():

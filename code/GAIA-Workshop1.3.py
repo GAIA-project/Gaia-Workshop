@@ -52,7 +52,7 @@ sparkworks = SparkWorks(properties.client_id, properties.client_secret)
 def checkButton():
     global show, change, set, exitapp, mode, Button
     try:
-        if (grovepi.digitalRead(Button)):
+        if (grovepi.digitalRead(button)):
             print("έχετε πιέσει το κουμπί")
             if show == 1:
                 show = 0

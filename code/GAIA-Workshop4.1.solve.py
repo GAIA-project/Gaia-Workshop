@@ -59,7 +59,7 @@ def threaded_function(sleep):
         i -= 1
 
 
-def map_value_to_leds(value, max, leds_available):
+def mapValueToLeds(value, max, leds_available):
     step = max / leds_available
     # num_leds = math.ceil(value/step)
     num_leds = round(value/step)
@@ -100,7 +100,7 @@ def loop():
     msg = "{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
     for i in [0, 1, 2]:
         print(msg.format(phases[i]['systemName'], current[i], power[i]))
-        open_leds[i] = map_value_to_leds(power[i], basemax, 12)
+        open_leds[i] = mapValueToLeds(power[i], basemax, 12)
     arduino_gauge.write(*open_leds)
 
     time.sleep(0.5)

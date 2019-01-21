@@ -56,6 +56,20 @@ def getSensorData():
             luminosity[i] = updateData(rooms[i], sparkworks.phenomenon("Luminosity"))
 
 
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
+
+
 # Show luminosity on leds
 def showLuminosity(light_value, a, b):
     for i in [0, 1]:
@@ -103,34 +117,6 @@ def setup():
 
 def loop():
     global time_idx, room_idx, time_idx_changed, room_idx_changed
-    # Detect button used for selecting hours
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Προηγούμενη ώρα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Previous Hour")
-            time_idx += 1
-            if time_idx >= 48:
-                time_idx = None
-                grovelcd.setText("Starting over...")
-            time_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-    # Detect button used for selecting rooms
-    try:
-        if (grovepi.digitalRead(button2)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            room_idx += 1
-            if room_idx >= 2:
-                room_idx = 0
-            room_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         grovelcd.setRGB(50, 50, 50)
@@ -160,6 +146,10 @@ def loop():
         # Show luminosity on the leds for the current room
         showLuminosity(luminosity[room_idx][time_idx], pin1[room_idx], pin2[room_idx])
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    time_idx, time_idx_changed = checkButton(button, time_idx, None, 48)
+    room_idx, room_idx_changed = checkButton(button2, room_idx, 0, 2)
 
 
 def main():

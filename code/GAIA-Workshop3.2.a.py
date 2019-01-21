@@ -61,6 +61,20 @@ def threaded_function(sleep):
         i -= 1
 
 
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
+
+
 # Find out the maximum value
 def showMaximum(values):
     max_value = max(values)
@@ -72,19 +86,6 @@ def showMaximum(values):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
     return max_value
-
-
-# Find out the minimum value
-def showMinimum(values):
-    min_value = min(values)
-    for i in [0, 1, 2]:
-        if values[i] == min_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
-    return min_value
 
 
 # Close all the leds
@@ -132,20 +133,6 @@ def setup():
 
 def loop():
     global option_idx, option_idx_changed
-    # Detect button used for selecting operation
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            option_idx += 1
-            if option_idx >= 3:
-                option_idx = 0
-                grovelcd.setText("Starting over...")
-            option_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
 
     # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
     if option_idx_changed:
@@ -169,6 +156,9 @@ def loop():
         grovelcd.setRGB(R[option_idx], G[option_idx], B[option_idx])
         grovelcd.setText(new_text)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    option_idx, option_idx_changed = checkButton(button, option_idx, 0, 3)
 
 
 def main():

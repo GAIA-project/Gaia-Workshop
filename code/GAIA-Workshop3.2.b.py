@@ -62,6 +62,20 @@ def threaded_function(sleep):
         i -= 1
 
 
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
+
+
 # Close all the leds
 def closeLeds():
     for i in [0, 1, 2]:
@@ -74,7 +88,7 @@ def calcDI(t, rh):
     return round(di, 1)
 
 
-def map_di_to_leds(di):
+def mapDiToLeds(di):
     led = 0
     word = " "
     if di < -1.7:
@@ -133,20 +147,6 @@ def setup():
 
 def loop():
     global option_idx, option_idx_changed
-    # Detect button used for selecting operation
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            option_idx += 1
-            if option_idx >= 3:
-                option_idx = 0
-                grovelcd.setText("Starting over...")
-            option_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
 
     # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
     if option_idx_changed:
@@ -156,7 +156,7 @@ def loop():
         di_map = [None, None, None]
         for i in [0, 1, 2]:
             di[i] = calcDI(temperature[i], humidity[i])
-            di_map[i] = map_di_to_leds(di[i])
+            di_map[i] = mapDiToLeds(di[i])
         arduino_gauge.write(di_map[0][0], di_map[1][0], di_map[2][0])
 
         # Print to terminal
@@ -173,6 +173,9 @@ def loop():
         grovelcd.setRGB(R[option_idx], G[option_idx], B[option_idx])
         grovelcd.setText(new_text)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    option_idx, option_idx_changed = checkButton(button, option_idx, 0, 3)
 
 
 def main():

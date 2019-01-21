@@ -24,8 +24,8 @@ B = [255, 0, 0]
 
 # Variables for the sensors
 rooms = None
-humidity = [0, 0, 0]
 temperature = [0, 0, 0]
+humidity = [0, 0, 0]
 hours = 5
 
 # Other global variables
@@ -61,6 +61,20 @@ def threaded_function(sleep):
         i -= 1
 
 
+# Sleep that break on click
+def breakSleep(interval):
+    i = 0
+    while (i < interval*10):
+        i += 1
+        try:
+            if (grovepi.digitalRead(button)):
+                time.sleep(.5)
+                break
+        except IOError:
+            print("Button Error")
+        time.sleep(.1)
+
+
 # Find out the maximum value
 def showMaximum(values):
     max_value = max(values)
@@ -85,21 +99,6 @@ def showMinimum(values):
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
     return min_value
-
-
-# Sleep that break on click
-def breakSleep(interval):
-    i = 0
-    while (i < interval):
-        i += 1
-        try:
-            if (grovepi.digitalRead(button)):
-                print("Έχετε πιέσει το κουμπί")
-                time.sleep(.5)
-                break
-        except IOError:
-            print("Button Error")
-        time.sleep(.1)
 
 
 # Close all the leds
@@ -145,14 +144,14 @@ def loop():
     new_text = "Min {0:s}\n{1:>14.1f}oC".format("Temperature", minimum)
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
-    breakSleep(50)
+    breakSleep(5)
 
     for i in [0, 1, 2]:
         print("Μέσος όρος θερμοκρασίας: {0:s}: {1:5.1f} oC".format(properties.the_rooms[i], temperature[i]))
         new_text = "{0:s}\n{1:>14.1f}oC".format("Avg Temperature", temperature[i])
         grovelcd.setRGB(R[i], G[i], B[i])
         grovelcd.setText(new_text)
-        breakSleep(50)
+        breakSleep(5)
 
     # maximum humidity
     maximum = showMaximum(humidity)
@@ -161,14 +160,14 @@ def loop():
     new_text = "Max {0:s}\n{1:>13s}%RH".format("Humidity", str(maximum))
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
-    breakSleep(50)
+    breakSleep(5)
 
     for i in [0, 1, 2]:
         print("Μέσος όρος υγρασίας: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[i], humidity[i]))
         new_text = "{0:s}\n{1:>13.1f}%RH".format("Avg Humidity", humidity[i])
         grovelcd.setRGB(R[i], G[i], B[i])
         grovelcd.setText(new_text)
-        breakSleep(50)
+        breakSleep(5)
 
 
 def main():

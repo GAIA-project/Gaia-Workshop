@@ -55,10 +55,24 @@ def updateData(group, param):
 
 # Get data from database
 def getSensorData():
-    if not exitapp:
-        for i in [0, 1]:
+    for i in [0, 1]:
+        if not exitapp:
             in_temp[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
             in_humi[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+
+
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
 
 
 # Find out the minimum value
@@ -71,6 +85,7 @@ def showMinimum(values):
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return min_value
 
 
 # Find out maximum value and show
@@ -83,6 +98,7 @@ def showMaximum(values):
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return max_value
 
 
 # Close all the leds
@@ -133,34 +149,6 @@ def setup():
 
 def loop():
     global time_idx, room_idx, time_idx_changed, room_idx_changed
-    # Detect button used for selecting hours
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Προηγούμενη ώρα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Previous Hour")
-            time_idx += 1
-            if time_idx >= 16:
-                time_idx = None
-                grovelcd.setText("Starting over...")
-            time_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-    # Detect button used for selecting rooms
-    try:
-        if (grovepi.digitalRead(button2)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            room_idx += 1
-            if room_idx >= 2:
-                room_idx = 0
-            room_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         grovelcd.setRGB(50, 50, 50)
@@ -204,6 +192,11 @@ def loop():
 
         # Show with red the classroom with maximum temperature difference
         showMaximum(temp_diff)
+    # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    time_idx, time_idx_changed = checkButton(button, time_idx, None, 16)
+    room_idx, room_idx_changed = checkButton(button2, room_idx, 0, 2)
 
 
 def main():

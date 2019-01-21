@@ -26,7 +26,6 @@ B = [255, 0, 0]
 rooms = None
 luminosity = [0, 0, 0]
 
-
 # Other global variables
 option_idx = 0
 option_idx_changed = True
@@ -58,6 +57,20 @@ def threaded_function(sleep):
             i = sleep
         time.sleep(.1)
         i -= 1
+
+
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
 
 
 # Find out the maximum value
@@ -140,20 +153,6 @@ def setup():
 
 def loop():
     global option_idx, option_idx_changed
-    # Detect button used for selecting operation
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Επόμενη αίθουσα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Room")
-            option_idx += 1
-            if option_idx >= 5:
-                option_idx = 0
-                grovelcd.setText("Starting over...")
-            option_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
 
     # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
     if option_idx_changed:
@@ -182,6 +181,9 @@ def loop():
 
         grovelcd.setText(new_text)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    option_idx, option_idx_changed = checkButton(button, option_idx, 0, 5)
 
 
 def main():

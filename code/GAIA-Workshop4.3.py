@@ -60,7 +60,21 @@ def getData():
             max_power[i] = data[1] * 230 / 1000
 
 
-def map_value_to_leds(value, max, leds_available):
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if (grovepi.digitalRead(button)):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
+
+
+def mapValueToLeds(value, max, leds_available):
     step = max / leds_available
     # num_leds = math.ceil(value/step)
     num_leds = round(value/step)
@@ -88,34 +102,6 @@ def setup():
 
 def loop():
     global time_idx, phase_idx, time_idx_changed, phase_idx_changed
-    # Detect button used for selecting hours
-    try:
-        if (grovepi.digitalRead(button)):
-            print("Προηγούμενη ώρα")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Previous Hour")
-            time_idx += 1
-            if time_idx >= 48:
-                time_idx = None
-                grovelcd.setText("Starting over...")
-            time_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-    # Detect button used for selecting phases
-    try:
-        if (grovepi.digitalRead(button2)):
-            print("Επόμενη φάση")
-            grovelcd.setRGB(50, 50, 50)
-            grovelcd.setText("Next Phase")
-            phase_idx += 1
-            if phase_idx >= 3:
-                phase_idx = -1
-            phase_idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         grovelcd.setRGB(50, 50, 50)
@@ -141,7 +127,7 @@ def loop():
             msg = "{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
             for i in [0, 1, 2]:
                 print(msg.format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
-                open_leds[i] = map_value_to_leds(power[i][time_idx], basemax, 12)
+                open_leds[i] = mapValueToLeds(power[i][time_idx], basemax, 12)
             arduino_gauge.write(*open_leds)
 
         # Print to LCD
@@ -154,6 +140,10 @@ def loop():
             grovelcd.setRGB(R[phase_idx], G[phase_idx], B[phase_idx])
         grovelcd.setText(new_text)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
+
+    # Detect button presses
+    time_idx, time_idx_changed = checkButton(button, time_idx, None, 48)
+    phase_idx, phase_idx_changed = checkButton(button2, phase_idx, -1, 3)
 
 
 def main():
