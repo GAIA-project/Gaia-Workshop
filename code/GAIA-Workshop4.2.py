@@ -124,7 +124,7 @@ def loop():
             open_leds = [0, 0, 0]
             basemax = max(max_power)
             print("Ημερομηνία: {0:s}".format(strdate))
-            msg = "{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
+            msg = "{0:s} Ρεύμα: {1:5.2f}A, Κατανάλωση: {2:7.2f}W"
             for i in [0, 1, 2]:
                 print(msg.format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
                 open_leds[i] = mapValueToLeds(power[i][time_idx], basemax, 12)

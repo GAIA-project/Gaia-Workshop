@@ -90,7 +90,7 @@ def megisti():
         if total[i] > maximum:
             maximum = total[i]
             hour = 1
-    return (maximum, hour)
+    return maximum, hour
 
 
 def setup():
@@ -124,16 +124,26 @@ def loop():
 
     # Έναρξη διαδικασίας εμφάνισης αποτελεσμάτων
     if time_idx_changed or phase_idx_changed:
-        time_idx_changed = False
         phase_idx_changed = False
 
-        maximum = megisti()
-
-        timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(maximum[1]))
+        timevalue = datetime.datetime.fromtimestamp((timestamp/1000.0)-3600*(time_idx))
         strdate = timevalue.strftime('%Y-%m-%d %H:%M:%S')
         strtime = timevalue.strftime('%H:%M')
 
-        new_text = "{0:s}\n{1:>15.2f}W".format(strtime, maximum[0])
+        maximum, unused = megisti()
+
+        # Print to terminal
+        if time_idx_changed:
+            time_idx_changed = False
+            open_leds = [0, 0, 0]
+            print("Ημερομηνία: {0:s}".format(strdate))
+            msg = "{0:s} Ρεύμα: {1:5.2f}A, Κατανάλωση: {2:7.2f}W"
+            for i in [0, 1, 2]:
+                print(msg.format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
+                open_leds[i] = mapValueToLeds(power[i][time_idx], maximum, 12)
+            arduino_gauge.write(*open_leds)
+
+        new_text = "{0:s}\n{1:>15.2f}W".format(strtime, maximum)
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(new_text)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
