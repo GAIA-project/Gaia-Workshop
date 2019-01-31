@@ -4,6 +4,7 @@ import os
 import sys
 import math
 import time
+import datetime
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
@@ -24,6 +25,7 @@ phases = None
 current = [0, 0, 0]
 power = [0, 0, 0]
 max_power = [0, 0, 0]
+timestamp = None
 
 # Other global variables
 thread = None
@@ -33,7 +35,9 @@ sparkworks = None
 
 # Update values from the database
 def updateData(resource):
+    global timestamp
     summary = sparkworks.summary(resource['uuid'])
+    timestamp = summary["latestTime"]
     latest = summary["latest"]
     maximum = max(summary["minutes5"])
     return (round(latest, 1), round(maximum, 1))
@@ -54,8 +58,8 @@ def threaded_function(sleep):
     while not exitapp:
         if i == 0:
             getData()
-            i = sleep
-        time.sleep(.1)
+            i = sleep*10
+        time.sleep(0.1)
         i -= 1
 
 
@@ -86,6 +90,8 @@ def setup():
     grovelcd.setRGB(50, 50, 50)
     grovelcd.setText(gaia_text.loading_data)
     getData()
+    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
 
     thread = Thread(target=threaded_function, args=(10,))
     thread.start()
@@ -94,17 +100,19 @@ def setup():
 def loop():
     open_leds = [0, 0, 0]
     basemax = max(max_power)
-    print("Μέγιστη κατανάλωση στις προηγούμενες 4 ώρες: " + str(basemax))
+    print("Μέγιστη κατανάλωση στις προηγούμενες 4 ώρες: {0:.2f}"
+          .format(basemax))
 
-    msg = "{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
     for i in [0, 1, 2]:
-        print(msg.format(phases[i]['systemName'], current[i], power[i]))
+        print("{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
+              .format(phases[i]['systemName'], current[i], power[i]))
         open_leds[i] = mapValueToLeds(power[i], basemax, 12)
     arduino_gauge.write(*open_leds)
 
     for i in [0, 1, 2]:
         grovelcd.setRGB(R[i], G[i], B[i])
-        grovelcd.setText("Phase: {0:d}\n{1:>15.2f}W".format(i+1, power[i]))
+        grovelcd.setText("Phase: {0:d}\n{1:>15.2f}W"
+                         .format(i+1, power[i]))
         time.sleep(5)
 
 

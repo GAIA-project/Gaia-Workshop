@@ -46,8 +46,8 @@ def updateData(group, param):
     global timestamp
     resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
     summary = sparkworks.summary(resource['uuid'])
-    values = summary["minutes60"]
     timestamp = summary["latestTime"]
+    values = summary["minutes60"]
     return values
 
 
@@ -93,7 +93,7 @@ def closeLeds():
         grovepi.digitalWrite(pin2[i], 0)
 
 
-def calcDI(t, rh):
+def calcDi(t, rh):
     di = t - 0.55 * (1 - 0.01 * rh) * (t - 14.5)
     return round(di, 1)
 
@@ -138,13 +138,15 @@ def setup():
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
 
@@ -155,6 +157,8 @@ def loop():
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(gaia_text.loading_data)
         getSensorData()
+        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
         time_idx = 0
         time_idx_changed = True
 
@@ -168,28 +172,33 @@ def loop():
         strtime = timevalue.strftime('%H:%M')
 
         # Calculate DI
-        di = [0, 0]
-        di_map = [None, None]
+        di_vals = [0, 0]
+        di_leds = [None, None]
+        di_word = [None, None]
         for i in [0, 1]:
-            di[i] = calcDI(temperature[i][time_idx], humidity[i][time_idx])
-            di_map[i] = mapDiToLeds(di[i])
-        arduino_gauge.write(di_map[0][0], di_map[1][0], 0)
+            di_vals[i] = calcDi(temperature[i][time_idx], humidity[i][time_idx])
+            di_leds[i], di_word[i] = mapDiToLeds(di_vals[i])
+        arduino_gauge.write(di_leds[0], di_leds[1], 0)
 
         # Print to terminal
-        print(" Ημερομηνία: {0:s}".format(strdate))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
-        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[room_idx], di[room_idx], di_map[room_idx][1]))
+        print(" Ημερομηνία: {0:s}"
+              .format(strdate))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
+        print("         DI: {0:s}: {1:5.1f} {2:s}"
+              .format(properties.the_rooms[room_idx], di_vals[room_idx], di_word[room_idx]))
 
         # Print to LCD
-        str_di = "DI:{0:.1f}".format(di[room_idx]).rjust(16 - len(strtime))
-        str_desc = di_map[room_idx][1].rjust(16)
+        str_di = "DI:{0:.1f}".format(di_vals[room_idx]).rjust(16 - len(strtime))
+        str_desc = di_word[room_idx].rjust(16)
         new_text = strtime + str_di + str_desc
         grovelcd.setRGB(R[room_idx], G[room_idx], B[room_idx])
         grovelcd.setText(new_text)
 
         # Show with red the classroom with minimum DI
-        showMinimum(di)
+        showMinimum(di_vals)
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
     # Detect button presses

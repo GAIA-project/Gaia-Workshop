@@ -6,6 +6,7 @@ button_1_state = False
 button_2_state = False
 switch_1_state = False
 switch_2_state = False
+switch_3_state = False
 
 buffered_switch = 0
 
@@ -70,10 +71,16 @@ def _s_key(event):
     switch_2_state = True
 
 
+def _d_key(event):
+    global switch_3_state
+    switch_3_state = True
+
+
 grovepi.bind("z", _z_key)
 grovepi.bind("x", _x_key)
 grovepi.bind("a", _a_key)
 grovepi.bind("s", _s_key)
+grovepi.bind("d", _d_key)
 
 grovepi.update()
 
@@ -108,19 +115,19 @@ def digitalRead(p):
 
 
 def analogRead(p):
-    global switch_1_state, switch_2_state, buffered_switch
+    global switch_1_state, switch_2_state, switch_3_state, buffered_switch
     grovepi.update()
     if p == 0 and switch_1_state:
         switch_1_state = False
-        if buffered_switch != 1024:
-            buffered_switch = 1024
-        else:
-            buffered_switch = 0
+        if buffered_switch != 1023:
+            buffered_switch = 1023
     if p == 0 and switch_2_state:
         switch_2_state = False
         if buffered_switch != 512:
             buffered_switch = 512
-        else:
+    if p == 0 and switch_3_state:
+        switch_3_state = False
+        if buffered_switch != 0:
             buffered_switch = 0
     return buffered_switch
 

@@ -44,10 +44,10 @@ sparkworks = None
 def updateData(resource):
     global timestamp
     summary = sparkworks.summary(resource['uuid'])
-    values = summary["minutes60"]
     timestamp = summary["latestTime"]
+    values = summary["minutes60"]
     maximum = max(summary["minutes60"])
-    return (values, round(maximum, 1))
+    return values, round(maximum, 1)
 
 
 # Get data from database
@@ -90,13 +90,15 @@ def setup():
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένοι αισθητήρες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     phases = sparkworks.current_phases(properties.uuid)
     for phase in phases:
-        print("\t{0:s}".format(phase['systemName']))
+        print("\t{0:s}"
+              .format(phase['systemName']))
     print("\n")
 
 
@@ -107,6 +109,8 @@ def loop():
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(gaia_text.loading_data)
         getData()
+        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
         time_idx = 0
         time_idx_changed = True
 
@@ -123,10 +127,11 @@ def loop():
             time_idx_changed = False
             open_leds = [0, 0, 0]
             basemax = max(max_power)
-            print("Ημερομηνία: {0:s}".format(strdate))
-            msg = "{0:s} Ρεύμα: {1:5.2f}A, Κατανάλωση: {2:7.2f}W"
+            print("Ημερομηνία: {0:s}"
+                  .format(strdate))
             for i in [0, 1, 2]:
-                print(msg.format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
+                print("{0:s} Ρεύμα: {1:5.2f}A, Κατανάλωση: {2:7.2f}W"
+                      .format(phases[i]['systemName'], current[i][time_idx], power[i][time_idx]))
                 open_leds[i] = mapValueToLeds(power[i][time_idx], basemax, 12)
             arduino_gauge.write(*open_leds)
 
@@ -157,3 +162,4 @@ try:
 except KeyboardInterrupt:
     exitapp = True
     raise
+

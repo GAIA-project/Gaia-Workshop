@@ -45,8 +45,8 @@ def updateData(group, param):
     global timestamp
     resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
     summary = sparkworks.summary(resource['uuid'])
-    values = summary["minutes60"]
     timestamp = summary["latestTime"]
+    values = summary["minutes60"]
     return values
 
 
@@ -103,13 +103,15 @@ def setup():
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
 
@@ -120,6 +122,8 @@ def loop():
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(gaia_text.loading_data)
         getSensorData()
+        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
         time_idx = 0
         time_idx_changed = True
 
@@ -133,9 +137,12 @@ def loop():
         strtime = timevalue.strftime('%H:%M')
 
         # Print to terminal
-        print(" Ημερομηνία: {0:s}".format(strdate))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
+        print(" Ημερομηνία: {0:s}"
+              .format(strdate))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
 
         # Print to LCD
         str_temperature = "T:{0:.1f} oC".format(temperature[room_idx][time_idx]).rjust(16 - len(strtime))

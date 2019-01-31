@@ -44,8 +44,8 @@ def updateData(group, param):
     global timestamp
     resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
     summary = sparkworks.summary(resource['uuid'])
-    values = summary["minutes60"]
     timestamp = summary["latestTime"]
+    values = summary["minutes60"]
     return values
 
 
@@ -72,19 +72,14 @@ def checkButton(button, idx, init, limit, step=1):
 
 # Show luminosity on leds
 def showLuminosity(light_value, a, b):
-    for i in [0, 1]:
-        if a == pin1[i] and b == pin2[i]:
-            if (light_value < 200):
-                # red LED
-                grovepi.digitalWrite(a, 0)
-                grovepi.digitalWrite(b, 1)
-            else:
-                # blue LED
-                grovepi.digitalWrite(a, 1)
-                grovepi.digitalWrite(b, 0)
-        else:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 0)
+    if light_value < 200:
+        # red LED
+        grovepi.digitalWrite(a, 0)
+        grovepi.digitalWrite(b, 1)
+    else:
+        # blue LED
+        grovepi.digitalWrite(a, 1)
+        grovepi.digitalWrite(b, 0)
 
 
 # Close all the leds
@@ -105,13 +100,15 @@ def setup():
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
 
@@ -122,6 +119,8 @@ def loop():
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(gaia_text.loading_data)
         getSensorData()
+        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
         time_idx = 0
         time_idx_changed = True
 
@@ -135,8 +134,10 @@ def loop():
         strtime = timevalue.strftime('%H:%M')
 
         # Print to terminal
-        print(" Ημερομηνία: {0:s}".format(strdate))
-        print("Φωτεινότητα: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], luminosity[room_idx][time_idx]))
+        print(" Ημερομηνία: {0:s}"
+              .format(strdate))
+        print("Φωτεινότητα: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], luminosity[room_idx][time_idx]))
 
         # Print to LCD
         new_text = "{0:s}\nLuminosity:{1:>5.1f}".format(strtime, luminosity[room_idx][time_idx])
@@ -144,6 +145,7 @@ def loop():
         grovelcd.setText(new_text)
 
         # Show luminosity on the leds for the current room
+        closeLeds()
         showLuminosity(luminosity[room_idx][time_idx], pin1[room_idx], pin2[room_idx])
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 

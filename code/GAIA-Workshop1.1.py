@@ -6,27 +6,32 @@ import time
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
-from grove_rgb_lcd import *
+import grove_rgb_lcd as grovelcd
 
 # Connect the Grove Button to digital port D8
 # SIG,NC,VCC,GND
 button = 8
 
-grovepi.pinMode(button, "INPUT")
-new_text = " "
+new_text = ""
 text1 = "Waiting         for a click..."
-text2 = "YOU HAVE CLICK  THE BUTTON!!"
+text2 = "YOU HAVE CLICKED THE BUTTON!!"
+
+grovepi.pinMode(button, "INPUT")
+grovelcd.setRGB(0, 0, 0)
+grovelcd.setText("")
+
 while True:
     try:
-        if new_text != text1:
+        if new_text is not text1:
             new_text = text1
-            setText(new_text)
+            grovelcd.setRGB(50, 50, 50)
+            grovelcd.setText(new_text)
             print(new_text)
-        setRGB(50, 50, 50)
+
         if grovepi.digitalRead(button):
             new_text = text2
-            setRGB(0, 255, 0)
-            setText(new_text)
+            grovelcd.setRGB(0, 255, 0)
+            grovelcd.setText(new_text)
             print(new_text)
             time.sleep(.5)
 

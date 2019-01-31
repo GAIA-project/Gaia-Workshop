@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import datetime
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
@@ -27,6 +28,7 @@ B = [255, 0, 0]
 rooms = None
 temperature = [0, 0, 0]
 humidity = [0, 0, 0]
+timestamp = 0
 
 # Other global variables
 option_idx = 0
@@ -38,8 +40,10 @@ sparkworks = None
 
 # Update values from the database
 def updateSiteData(group, param):
-    resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
-    latest = sparkworks.latest(resource['uuid'])
+    global timestamp
+    resource = sparkworks.groupDeviceResource(group["uuid"], param["uuid"])
+    latest = sparkworks.latest(resource["uuid"])
+    timestamp = latest["latestTime"]
     value = latest["latest"]
     return round(value, 1)
 
@@ -57,8 +61,8 @@ def threaded_function(sleep):
     while not exitapp:
         if i == 0:
             getData()
-            i = sleep
-        time.sleep(.1)
+            i = sleep*10
+        time.sleep(0.1)
         i -= 1
 
 
@@ -127,19 +131,23 @@ def setup():
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     grovelcd.setRGB(50, 50, 50)
     grovelcd.setText(gaia_text.loading_data)
     getData()
+    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
 
     thread = Thread(target=threaded_function, args=(10,))
     thread.start()
@@ -160,9 +168,12 @@ def loop():
         arduino_gauge.write(di_map[0][0], di_map[1][0], di_map[2][0])
 
         # Print to terminal
-        print("Θερμοκρασία: {0:s}: {1:5.1f} oC ".format(properties.the_rooms[option_idx], temperature[option_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[option_idx], humidity[option_idx]))
-        print("         DI: {0:s}: {1:5.1f} {2:s}".format(properties.the_rooms[option_idx], di[option_idx], di_map[option_idx][1]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f} oC "
+              .format(properties.the_rooms[option_idx], temperature[option_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f} %RH"
+              .format(properties.the_rooms[option_idx], humidity[option_idx]))
+        print("         DI: {0:s}: {1:5.1f} {2:s}"
+              .format(properties.the_rooms[option_idx], di[option_idx], di_map[option_idx][1]))
 
         # Print to LCD
         lcd_temp = "{0:4.1f}oC".format(temperature[option_idx])

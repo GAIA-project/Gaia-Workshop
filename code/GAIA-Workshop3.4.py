@@ -48,8 +48,8 @@ def updateData(group, param):
     global timestamp
     resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
     summary = sparkworks.summary(resource['uuid'])
-    values = summary["minutes60"]
     timestamp = summary["latestTime"]
+    values = summary["minutes60"]
     return values
 
 
@@ -100,11 +100,14 @@ def getOutsideData():
     api_key = "a96063dd6aacda945d68bb05209e848f"
     current_time = datetime.datetime.now()
     print("forecast.io: " + str(current_time))
-    forecast = forecastio.load_forecast(api_key, properties.GPSposition[0], properties.GPSposition[1], time=current_time)
+    forecast = forecastio.load_forecast(api_key,
+                                        properties.GPSposition[0],
+                                        properties.GPSposition[1],
+                                        time=current_time)
 
     by_hour = forecast.hourly()
     i = 0
-    hour = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    hour = [0 for x in range(16)]
     for hourly_data in by_hour.data:
         if i < 16:
             hour[15 - i] = hourly_data.time
@@ -124,13 +127,15 @@ def setup():
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
 
@@ -141,6 +146,8 @@ def loop():
         grovelcd.setRGB(50, 50, 50)
         grovelcd.setText(gaia_text.loading_data)
         getSensorData()
+        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
         getOutsideData()
         time_idx = 0
         time_idx_changed = True
@@ -155,11 +162,16 @@ def loop():
         strtime = timevalue.strftime('%H:%M')
 
         # Print to terminal
-        print(" Ημερομηνία: {0:s}".format(strdate))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}".format("Εξωτερική", out_temp[time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}".format("Εξωτερική", out_humi[time_idx]))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], in_temp[room_idx][time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}".format(properties.the_rooms[room_idx], in_humi[room_idx][time_idx]))
+        print(" Ημερομηνία: {0:s}"
+              .format(strdate))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}"
+              .format("Εξωτερική", out_temp[time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}"
+              .format("Εξωτερική", out_humi[time_idx]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], in_temp[room_idx][time_idx]))
+        print("    Υγρασία: {0:s}: {1:5.1f}"
+              .format(properties.the_rooms[room_idx], in_humi[room_idx][time_idx]))
 
         # Print to LCD
         str_in_temp = "Ti:{0:.1f}".format(in_temp[room_idx][time_idx])

@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import datetime
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
@@ -16,6 +17,7 @@ from sparkworks import SparkWorks
 pin1 = [2, 4, 6]
 pin2 = [3, 5, 7]
 button = 8
+switch = 0
 
 # Colors for the rooms
 R = [255, 255, 0]
@@ -28,156 +30,118 @@ luminosity = [0, 0, 0]
 temperature = [0, 0, 0]
 humidity = [0, 0, 0]
 noise = [0, 0, 0]
-swvalue = 0
+timestamp = None
 
 # Other global variables
-grovepi.pinMode(Button, "INPUT")
-Interruptor = 0
-grovepi.pinMode(Interruptor, "INPUT")
-
-for i in [0, 1, 2]:
-    grovepi.pinMode(pin1[i], "OUTPUT")
-    grovepi.pinMode(pin2[i], "OUTPUT")
-
-# initiliaze global variables
-mode = 0
-show = 0
-set = 0
+option_idx = 0
+option_idx_changed = True
+option_idx_limit = 1
+mode_idx = 0
+mode_idx_changed = True
 exitapp = False
-sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+sparkworks = None
 
 
-
-# Function that check the button
-def checkButton():
-    global show, change, set, exitapp, mode, Button
-    try:
-        if (grovepi.digitalRead(button)):
-            print("έχετε πιέσει το κουμπί")
-            if show == 1:
-                show = 0
-            if set == 5:
-                set = 0
-            elif set == 14:
-                set = 0
-            else:
-                set = set + 1
-            time.sleep(.3)
-    except IOError:
-        print("Button Error")
-
-
-# Function that check the switch position
-def checkSwitch():
-    global show, mode, change, set, exitapp
-    swvalue = grovepi.analogRead(0)
-    if swvalue < 500:
-        if mode == 1:
-            print("Μεταβείτε στη λειτουργία 1")
-            set = 0
-            mode = 0
-    else:
-        if mode == 0:
-            print("Μεταβείτε στη λειτουργία 2")
-            set = 0
-            mode = 1
-    time.sleep(.3)
-
-
-# Take new values from the data base
+# Update values from the database
 def updateSiteData(group, param):
-    resource = sparkworks.groupDeviceResource(group['uuid'], param)
-    latest = sparkworks.latest(resource['uuid'])
-    latest_value = float("{0:.1f}".format(float(latest["latest"])))
-    return latest_value
+    global timestamp
+    resource = sparkworks.groupDeviceResource(group["uuid"], param["uuid"])
+    latest = sparkworks.latest(resource["uuid"])
+    timestamp = latest["latestTime"]
+    value = latest["latest"]
+    return round(value, 1)
 
 
-# Get data from
+# Get data from database
 def getData():
-    for i in [0, 1, 2]:
-        if not exitapp:
-            luminosity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Luminosity")['uuid'])
-    for i in [0, 1, 2]:
-        if not exitapp:
-            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity")['uuid'])
-    for i in [0, 1, 2]:
-        if not exitapp:
-            temperature[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature")['uuid'])
-    for i in [0, 1, 2]:
-        if not exitapp:
-            noise[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Noise")['uuid'])
     print("Νέα δεδομένα:")
     for i in [0, 1, 2]:
-        print(properties.the_rooms[i], "Υγρασία:", humidity[i], "%RH Φωτεινότητα:", luminosity[i], "θερμοκρασία:", temperature[i], "C θόρυβος:", noise[i], "dB")
+        if not exitapp:
+            luminosity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Luminosity"))
+        if not exitapp:
+            temperature[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
+        if not exitapp:
+            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+        if not exitapp:
+            noise[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Noise"))
+        print(("{0:s}\n\t" +
+               "Υγρασία: {1:.1f}%RH\n\t" +
+               "Φωτεινότητα: {2:.1f}\n\t" +
+               "Θερμοκρασία: {3:.1f}C\n\t" +
+               "Θόρυβος: {4:.1f}dB")
+              .format(rooms[i]["name"].encode('utf-8'),
+                      humidity[i],
+                      luminosity[i],
+                      temperature[i],
+                      noise[i]))
 
 
 def threaded_function(sleep):
-    i = sleep * 10
+    i = sleep*10
     while not exitapp:
         if i == 0:
             getData()
-            i = sleep
-        time.sleep(.1)
+            i = sleep*10
+        time.sleep(0.1)
         i -= 1
 
 
-print("όνομα χρήστη:\n\t%s\n" % properties.username)
-print("Επιλεγμένη αίθουσα:")
-for room in properties.the_rooms:
-    print("\t%s" % room.decode('utf-8'))
-print('\n')
+def checkButton(button, idx, init, limit, step=1):
+    idx_changed = False
+    try:
+        if grovepi.digitalRead(button):
+            idx += step
+            if idx >= limit:
+                idx = init
+            idx_changed = True
+            time.sleep(0.5)
+    except IOError:
+        print("Button Error")
+    return idx, idx_changed
 
-sparkworks.connect(properties.username, properties.password)
-rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
 
-print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
-setText(gaia_text.loading_data)
-getData()
-
-thread = Thread(target=threaded_function, args=(10,))
-thread.start()
-
-# initialize the screen
-setText(gaia_text.press_to_start)
-setRGB(50, 50, 50)
-time.sleep(1)
-
-text = ""
-new_text = ""
+def checkSwitch(switch, idx, state_1, state_2):
+    idx_changed = False
+    try:
+        reading = grovepi.analogRead(switch)
+        if reading < 500:
+            if idx != state_1:
+                idx = state_1
+                idx_changed = True
+        else:
+            if idx != state_2:
+                idx = state_2
+                idx_changed = True
+        time.sleep(0.5)
+    except IOError:
+        print("Switch Error")
+    return idx, idx_changed
 
 
 # Find out the maximum value
-def maximum(v, sensor, unit):
-    global new_text
-    max_value = max(v[0], v[1], v[2])
-    print(max_value, v)
-    #print(gaia_text.max_message % (sensor, max_value, unit))
-    new_text = (gaia_text.max_message % (sensor, max_value, unit))
-    setRGB(60, 60, 60)
+def showMaximum(values):
+    max_value = max(values)
     for i in [0, 1, 2]:
-        if v[i] == max_value:
+        if values[i] == max_value:
             grovepi.digitalWrite(pin1[i], 0)
             grovepi.digitalWrite(pin2[i], 1)
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return max_value
 
 
 # Find out the minimum value
-def minimum(v, sensor, unit):
-    global pin1, pin2, new_text
-    min_value = min(v[0], v[1], v[2])
-    print(min_value, v)
-    #print(gaia_text.min_message % (sensor, min_value, unit))
-    new_text = (gaia_text.min_message % (sensor, min_value, unit))
-    setRGB(60, 60, 60)
+def showMinimum(values):
+    min_value = min(values)
     for i in [0, 1, 2]:
-        if v[i] == min_value:
+        if values[i] == min_value:
             grovepi.digitalWrite(pin1[i], 0)
             grovepi.digitalWrite(pin2[i], 1)
         else:
             grovepi.digitalWrite(pin1[i], 1)
             grovepi.digitalWrite(pin2[i], 0)
+    return min_value
 
 
 # Close all the leds
@@ -187,9 +151,9 @@ def closeLeds():
         grovepi.digitalWrite(pin2[i], 0)
 
 
-# Show the luminosity
+# Show luminosity on leds
 def showLuminosity(light_value, a, b):
-    if (light_value < 200):
+    if light_value < 200:
         # red LED
         grovepi.digitalWrite(a, 0)
         grovepi.digitalWrite(b, 1)
@@ -199,7 +163,7 @@ def showLuminosity(light_value, a, b):
         grovepi.digitalWrite(b, 0)
 
 
-# Show the  temperature
+# Show the temperature
 def showTemperature(temperature_value, a, b):
     if 18 < temperature_value < 25:
         # BLue LED
@@ -211,7 +175,7 @@ def showTemperature(temperature_value, a, b):
         grovepi.digitalWrite(b, 1)
 
 
-# show the humidity
+# Show the humidity
 def showHumidity(humidity_value, a, b):
     if 30 < humidity_value < 50:
         grovepi.digitalWrite(a, 1)
@@ -221,7 +185,7 @@ def showHumidity(humidity_value, a, b):
         grovepi.digitalWrite(b, 1)
 
 
-# show the noise
+# Show the noise
 def showNoise(noise_value, a, b):
     if noise_value < 50:
         grovepi.digitalWrite(a, 1)
@@ -231,148 +195,173 @@ def showNoise(noise_value, a, b):
         grovepi.digitalWrite(b, 1)
 
 
-# close all the leds
-closeLeds()
+def setup():
+    global sparkworks, rooms, thread
+    grovepi.pinMode(button, "INPUT")
+    grovepi.pinMode(switch, "INPUT")
+    for i in [0, 1, 2]:
+        grovepi.pinMode(pin1[i], "OUTPUT")
+        grovepi.pinMode(pin2[i], "OUTPUT")
+    closeLeds()
+    grovelcd.setRGB(0, 0, 0)
+    grovelcd.setText("")
+
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
+    print("Επιλεγμένες αίθουσες:")
+    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
+    sparkworks.connect(properties.username, properties.password)
+    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
+    print("\n")
+
+    print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
+    grovelcd.setRGB(50, 50, 50)
+    grovelcd.setText(gaia_text.loading_data)
+    getData()
+    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
+
+    thread = Thread(target=threaded_function, args=(10,))
+    thread.start()
 
 
 def loop():
-    global new_text, change, show, set
-    if set == 0:
-        if mode == 0:
-            print("Λειτουργία 1: Πατήστε το κουμπί για να ξεκινήσετε")
-            new_text = ("Mode 1: Click the button to follow")
-            setRGB(50, 50, 50)
-            closeAllLeds()
-        if mode == 1:
-            print("Λειτουργία 2: Πατήστε το κουμπί για να ξεκινήσετε")
-            new_text = ("Mode 2: Click the button to follow")
-            setRGB(50, 50, 50)
-            closeAllLeds()
-    if set == 1:
-        show = 0
-        if mode == 0:
-            set = 2
-        if mode == 1:
-            set = 7
-    if set == 2:
-        if (show):
-            for i in [0, 1, 2]:
-                showLuminosity(luminosity[i], pin1[i], pin2[i])
-        else:
-            closeAllLeds()
-            i = 0
-            print ("φωτεινότητα:[μοβ,πορτοκαλί,πράσινο]")
+    global option_idx, mode_idx, option_idx_changed, mode_idx_changed, option_idx_limit
+    if option_idx_changed or mode_idx_changed:
+        if mode_idx_changed:
+            option_idx = 0
+
+        option_idx_changed = False
+        mode_idx_changed = False
+
+        if option_idx == 0:
+            if mode_idx == 0:
+                print("Λειτουργία 1: Πατήστε το κουμπί για να ξεκινήσετε")
+                grovelcd.setText("Mode 1:\nClick to continue")
+                grovelcd.setRGB(50, 50, 50)
+                closeLeds()
+                option_idx = 2
+                option_idx_limit = 5
+            if mode_idx == 1:
+                print("Λειτουργία 2: Πατήστε το κουμπί για να ξεκινήσετε")
+                grovelcd.setText("Mode 2:\nClick to continue")
+                grovelcd.setRGB(50, 50, 50)
+                closeLeds()
+                option_idx = 7
+                option_idx_limit = 14
+
+        if option_idx == 2:
+            closeLeds()
+            print("Φωτεινότητα: [μοβ,πορτοκαλί,πράσινο]")
             print(luminosity)
             for i in [0, 1, 2]:
-                setText("Light:" + str(luminosity[i]))
-                setRGB(R[i], G[i], B[i])
+                grovelcd.setRGB(R[i], G[i], B[i])
+                grovelcd.setText("Light:\n{0:.1f}".format(luminosity[i]))
                 showLuminosity(luminosity[i], pin1[i], pin2[i])
                 time.sleep(2)
-            time.sleep(2)
-            new_text = ("LIGHT           " + gaia_text.click_to_continue)
-            setRGB(60, 60, 60)
-            show = 1
-    if set == 3:
-        if (show):
-            for i in [0, 1, 2]:
-                showHumidity(humidity[i], pin1[i], pin2[i])
-        else:
-            closeAllLeds()
-            print ("υγρασία:[μοβ,πορτοκαλί,πράσινο]")
+            grovelcd.setRGB(60, 60, 60)
+            grovelcd.setText("LIGHT\n{0:s}"
+                             .format(gaia_text.click_to_continue))
+
+        if option_idx == 3:
+            closeLeds()
+            print("Υγρασία: [μοβ,πορτοκαλί,πράσινο]")
             print(humidity)
             for i in [0, 1, 2]:
-                setText("Humid:" + str(humidity[i]) + " %RH")
-                setRGB(R[i], G[i], B[i])
+                grovelcd.setRGB(R[i], G[i], B[i])
+                grovelcd.setText("Humidity:\n{0:.1f} %RH".format(humidity[i]))
                 showHumidity(humidity[i], pin1[i], pin2[i])
                 time.sleep(2)
-            new_text = ("HUMIDITY        " + gaia_text.click_to_continue)
-            setRGB(60, 60, 60)
-            show = 1
-    if set == 4:
-        if (show):
-            for i in [0, 1, 2]:
-                showTemperature(temperature[i], pin1[i], pin2[i])
-        else:
-            closeAllLeds()
-            print ("θερμοκρασία:[μοβ,πορτοκαλί,πράσινο]")
+            grovelcd.setRGB(60, 60, 60)
+            grovelcd.setText("HUMIDITY\n{0:s}"
+                             .format(gaia_text.click_to_continue))
+
+        if option_idx == 4:
+            closeLeds()
+            print("Θερμοκρασία: [μοβ,πορτοκαλί,πράσινο]")
             print(temperature)
             for i in [0, 1, 2]:
-                setText("Temp:" + str(temperature[i]) + " Cdeg")
-                setRGB(R[i], G[i], B[i])
+                grovelcd.setRGB(R[i], G[i], B[i])
+                grovelcd.setText("Temperature:\n{0:.1f} Cdeg".format(temperature[i]))
                 showTemperature(temperature[i], pin1[i], pin2[i])
                 time.sleep(2)
-            new_text = ("TEMPERATURE     " + gaia_text.click_to_continue)
-            setRGB(60, 60, 60)
-            show = 1
-    if set == 5:
-        if (show):
-            for i in [0, 1, 2]:
-                showNoise(noise[i], pin1[i], pin2[i])
-        else:
-            closeAllLeds()
-            print ("θόρυβο:[μοβ,πορτοκαλί,πράσινο]")
+            grovelcd.setRGB(60, 60, 60)
+            grovelcd.setText("TEMPERATURE\n{0:s}"
+                             .format(gaia_text.click_to_continue))
+
+        if option_idx == 5:
+            closeLeds()
+            print("Θόρυβος: [μοβ,πορτοκαλί,πράσινο]")
             print(noise)
             for i in [0, 1, 2]:
-                setText("Noise:" + str(noise[i]) + " dB")
-                setRGB(R[i], G[i], B[i])
+                grovelcd.setRGB(R[i], G[i], B[i])
+                grovelcd.setText("Noise:\n{0:.1f} dB".format(noise[i]))
                 showNoise(noise[i], pin1[i], pin2[i])
                 time.sleep(2)
-            new_text = ("NOISE           " + gaia_text.click_to_continue)
-            setRGB(60, 60, 60)
-            show = 1
-    if set == 7:
-        # maximum light
-        print("μέγιστη φωτεινότητα [μοβ,πορτοκαλί,πράσινο]")
-        maximum(luminosity, "Luminosity", " ")
-        time.sleep(.1)
-    if set == 8:
-        # minimum light
-        print("ελάχιστο φωτεινότητα [μοβ,πορτοκαλί,πράσινο]")
-        minimum(luminosity, "Luminosity", " ")
-        time.sleep(.1)
-    if set == 9:
-        # maximum humidity
-        print("μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]")
-        #maximum(humidity, "Humidity", " %RH")
-        time.sleep(.1)
-    if set == 10:
-        # minimum humidity
-        print("ελάχιστο υγρασία [μοβ,πορτοκαλί,πράσινο] %RH")
-        minimum(humidity, "Humidity", "%RH")
-        time.sleep(.1)
-    if set == 11:
-        # maximum temperature
-        print("μέγιστη θερμοκρασία [μοβ,πορτοκαλί,πράσινο] Cdeg")
-        maximum(temperature, "Temp", " Cdeg")
-        time.sleep(.1)
-    if set == 12:
-        # minimum temperature
-        print("ελάχιστο θερμοκρασία [μοβ,πορτοκαλί,πράσινο] Cdeg")
-        minimum(temperature, "Temp", " Cdeg")
-        time.sleep(.1)
-    if set == 13:
-        # maximum noise
-        print("μέγιστη θόρυβο [μοβ,πορτοκαλί,πράσινο] dB")
-        maximum(noise, "Noise", " dB")
-        time.sleep(.1)
-    if set == 14:
-        # minimum noise
-        print("ελάχιστο Noise [μοβ,πορτοκαλί,πράσινο] dB")
-        minimum(noise, "θόρυβο", " dB")
-        time.sleep(.1)
+            grovelcd.setRGB(60, 60, 60)
+            grovelcd.setText("NOISE\n{0:s}"
+                             .format(gaia_text.click_to_continue))
+
+        if option_idx == 7:
+            # maximum light
+            print("Μέγιστη Φωτεινότητα [μοβ, πορτοκαλί, πράσινο]")
+            print("{0:^19.1f} {1:s}"
+                  .format(showMaximum(luminosity), str(luminosity)))
+            time.sleep(.1)
+        if option_idx == 8:
+            # minimum light
+            print("Ελάχιστη Φωτεινότητα [μοβ, πορτοκαλί, πράσινο]")
+            print("{0:^20.1f} {1:s}"
+                  .format(showMinimum(luminosity), str(luminosity)))
+            time.sleep(.1)
+        if option_idx == 9:
+            # maximum humidity
+            print("Μέγιστη Υγρασία [μοβ, πορτοκαλί, πράσινο]")
+            print("{0:^15.1f} {1:s}"
+                  .format(showMaximum(humidity), str(humidity)))
+            time.sleep(.1)
+        if option_idx == 10:
+            # minimum humidity
+            print("Ελάχιστη Υγρασία [μοβ, πορτοκαλί, πράσινο] %RH")
+            print("{0:^16.1f} {1:s}"
+                  .format(showMinimum(humidity), str(humidity)))
+            time.sleep(.1)
+        if option_idx == 11:
+            # maximum temperature
+            print("Μέγιστη Θερμοκρασία [μοβ, πορτοκαλί, πράσινο] Cdeg")
+            print("{0:^19.1f} {1:s}"
+                  .format(showMaximum(temperature), str(temperature)))
+            time.sleep(.1)
+        if option_idx == 12:
+            # minimum temperature
+            print("Ελάχιστη Θερμοκρασία [μοβ, πορτοκαλί, πράσινο] Cdeg")
+            print("{0:^20.1f} {1:s}"
+                  .format(showMinimum(temperature), str(temperature)))
+            time.sleep(.1)
+        if option_idx == 13:
+            # maximum noise
+            print("Μέγιστος Θόρυβος [μοβ, πορτοκαλί, πράσινο] dB")
+            print("{0:^16.1f} {1:s}"
+                  .format(showMaximum(noise), str(noise)))
+            time.sleep(.1)
+        if option_idx == 14:
+            # minimum noise
+            print("Ελάχιστος Θόρυβος [μοβ, πορτοκαλί, πράσινο] dB")
+            print("{0:^17.1f} {1:s}"
+                  .format(showMaximum(noise), str(noise)))
+            time.sleep(.1)
+
+    option_idx, option_idx_changed = checkButton(button, option_idx, 0, option_idx_limit)
+    mode_idx, mode_idx_changed = checkSwitch(switch, mode_idx, 0, 1)
 
 
 def main():
-    global text, new_text
-
+    setup()
     while not exitapp:
-        checkButton()
-        checkSwitch()
         loop()
-        if text != new_text:
-            text = new_text
-            print("settext", text)
-            setText(text)
 
 
 try:

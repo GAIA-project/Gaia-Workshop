@@ -3,6 +3,7 @@
 import os
 import sys
 import time
+import datetime
 from threading import Thread
 sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
@@ -26,6 +27,7 @@ B = [255, 0, 0]
 rooms = None
 temperature = [0, 0, 0]
 humidity = [0, 0, 0]
+timestamp = None
 
 # Other global variables
 thread = None
@@ -35,8 +37,10 @@ sparkworks = None
 
 # Update values from the database
 def updateSiteData(group, param):
+    global timestamp
     resource = sparkworks.groupDeviceResource(group['uuid'], param['uuid'])
     latest = sparkworks.latest(resource['uuid'])
+    timestamp = latest["latestTime"]
     value = latest["latest"]
     return round(value, 1)
 
@@ -54,12 +58,12 @@ def threaded_function(sleep):
     while not exitapp:
         if i == 0:
             getData()
-            i = sleep
-        time.sleep(.1)
+            i = sleep*10
+        time.sleep(0.1)
         i -= 1
 
 
-# Sleep that break on click
+# Sleep that breaks on click
 def breakSleep(interval):
     i = 0
     while (i < interval*10):
@@ -116,19 +120,23 @@ def setup():
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
+    print("Όνομα χρήστη:\n\t{0:s}\n"
+          .format(properties.username))
     print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
-        print("\t{0:s}".format(room['name'].encode('utf-8')))
+        print("\t{0:s}"
+              .format(room['name'].encode('utf-8')))
     print("\n")
 
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     grovelcd.setRGB(50, 50, 50)
     grovelcd.setText(gaia_text.loading_data)
     getData()
+    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
+          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
 
     thread = Thread(target=threaded_function, args=(10,))
     thread.start()
@@ -138,14 +146,16 @@ def loop():
     # minimum temperature
     minimum = showMinimum(temperature)
     print("Ελάχιστη θερμοκρασία [μοβ,πορτοκαλί,πράσινο]")
-    print("{0:^20.1f} {1:s}".format(minimum, str(temperature)))
+    print("{0:^20.1f} {1:s}"
+          .format(minimum, str(temperature)))
     new_text = "Min {0:s}\n{1:>14.1f}oC".format("Temperature", minimum)
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
     breakSleep(5)
 
     for i in [0, 1, 2]:
-        print("Θερμοκρασία: {0:s}: {1:5.1f} oC".format(properties.the_rooms[i], temperature[i]))
+        print("Θερμοκρασία: {0:s}: {1:5.1f} oC"
+              .format(properties.the_rooms[i], temperature[i]))
         new_text = "{0:s}\n{1:>14.1f}oC".format("Temperature", temperature[i])
         grovelcd.setRGB(R[i], G[i], B[i])
         grovelcd.setText(new_text)
@@ -154,14 +164,16 @@ def loop():
     # maximum humidity
     maximum = showMaximum(humidity)
     print("Μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]")
-    print("{0:^15.1f} {1:s}".format(maximum, str(humidity)))
+    print("{0:^15.1f} {1:s}"
+          .format(maximum, str(humidity)))
     new_text = "Max {0:s}\n{1:>13s}%RH".format("Humidity", str(maximum))
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
     breakSleep(5)
 
     for i in [0, 1, 2]:
-        print("Υγρασία: {0:s}: {1:5.1f} %RH".format(properties.the_rooms[i], humidity[i]))
+        print("Υγρασία: {0:s}: {1:5.1f} %RH"
+              .format(properties.the_rooms[i], humidity[i]))
         new_text = "{0:s}\n{1:>13.1f}%RH".format("Humidity", humidity[i])
         grovelcd.setRGB(R[i], G[i], B[i])
         grovelcd.setText(new_text)
