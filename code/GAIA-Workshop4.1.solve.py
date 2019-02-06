@@ -36,7 +36,7 @@ sparkworks = None
 # Update values from the database
 def updateData(resource):
     global timestamp
-    summary = sparkworks.summary(resource['uuid'])
+    summary = sparkworks.summary(resource["uuid"])
     timestamp = summary["latestTime"]
     latest = summary["latest"]
     maximum = max(summary["minutes5"])
@@ -54,7 +54,7 @@ def getData():
 
 
 def threaded_function(sleep):
-    i = sleep * 10
+    i = sleep*10
     while not exitapp:
         if i == 0:
             getData()
@@ -77,13 +77,18 @@ def setup():
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}\n".format(properties.username))
-    print("Επιλεγμένοι αισθητήρες:")
+    print("Όνομα χρήστη:\n\t{0:s}"
+          .format(properties.username))
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
+    group = sparkworks.group(properties.uuid)
+    print("\t{0:s}\n"
+          .format(group["name"].encode("utf-8")))
+    print("Επιλεγμένοι αισθητήρες:")
     phases = sparkworks.current_phases(properties.uuid)
     for phase in phases:
-        print("\t{0:s}".format(phase['systemName']))
+        print("\t{0:s}"
+              .format(phase["systemName"]))
     print("\n")
 
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
@@ -134,3 +139,4 @@ try:
 except KeyboardInterrupt:
     exitapp = True
     raise
+

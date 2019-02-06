@@ -46,8 +46,8 @@ sparkworks = None
 # Update values from the database
 def updateData(group, param):
     global timestamp
-    resource = sparkworks.groupAggResource(group['uuid'], param['uuid'])
-    summary = sparkworks.summary(resource['uuid'])
+    resource = sparkworks.groupAggResource(group["uuid"], param["uuid"])
+    summary = sparkworks.summary(resource["uuid"])
     timestamp = summary["latestTime"]
     values = summary["minutes60"]
     return values
@@ -140,15 +140,18 @@ def setup():
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}\n"
+    print("Όνομα χρήστη:\n\t{0:s}"
           .format(properties.username))
-    print("Επιλεγμένες αίθουσες:")
     sparkworks = SparkWorks(properties.client_id, properties.client_secret)
     sparkworks.connect(properties.username, properties.password)
+    group = sparkworks.group(properties.uuid)
+    print("\t{0:s}\n"
+          .format(group["name"].encode("utf-8")))
+    print("Επιλεγμένες αίθουσες:")
     rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
     for room in rooms:
         print("\t{0:s}"
-              .format(room['name'].encode('utf-8')))
+              .format(room["name"].encode("utf-8")))
     print("\n")
 
 
