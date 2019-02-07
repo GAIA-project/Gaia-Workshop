@@ -23,9 +23,9 @@ def connect():
 
 
 def write(a, b, c):
-    _a = ord('{0:X}'.format(a))
-    _b = ord('{0:X}'.format(b))
-    _c = ord('{0:X}'.format(c))
+    _a = ord('{0:X}'.format(a)[-1])
+    _b = ord('{0:X}'.format(b)[-1])
+    _c = ord('{0:X}'.format(c)[-1])
     if __name__ == '__main__':
         print(chr(_a), chr(_b), chr(_c))
     data = [_a, _b, _c, ord('\n')]
