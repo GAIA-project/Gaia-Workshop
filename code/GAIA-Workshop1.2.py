@@ -7,7 +7,7 @@ sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
 import grove_rgb_lcd as grovelcd
-import gaia_text
+import gaiapi
 
 switch = 0
 

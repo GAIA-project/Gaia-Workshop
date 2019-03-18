@@ -10,15 +10,21 @@ sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
 import grove_rgb_lcd as grovelcd
-import gaia_text
+import gaiapi
 import properties
 from sparkworks import SparkWorks
 import arduino_gauge_i2c as arduino_gauge
 
+# Select pins for the leds and buttons
+led_pins = [[2, 3],
+            [4, 5],
+            [6, 7]]
+button = 8
+
 # Colors for the rooms
-R = [255, 255, 0]
-G = [0, 128, 255]
-B = [255, 0, 0]
+lcd_rgbs = [[255, 0, 255],
+            [255, 128, 0],
+            [0, 255, 0]]
 
 # Variables for the sensors
 phases = None
@@ -29,76 +35,82 @@ timestamp = None
 
 # Other global variables
 thread = None
+data_updated = False
 exitapp = False
-sparkworks = None
+api = None
+verbose = False
+
+
+# Initialize connection to the database
+def initData():
+    print("Όνομα χρήστη:\n\t{0:s}".format(properties.username))
+    sw = SparkWorks(properties.client_id, properties.client_secret)
+    sw.connect(properties.username, properties.password)
+    group = sw.group(properties.uuid)
+    print("\t{0:s}\n".format(group["name"].encode("utf-8")))
+
+    print("Επιλεγμένοι αισθητήρες:")
+    phases = sw.current_phases(properties.uuid)
+    for phase in phases:
+        print("\t{0:s}".format(phase["systemName"]))
+    print("\n")
+    return sw, phases
 
 
 # Update values from the database
-def updateData(resource):
-    global timestamp
-    summary = sparkworks.summary(resource["uuid"])
+def updateData(sw, resource):
+    summary = sw.summary(resource["uuid"])
     timestamp = summary["latestTime"]
     latest = summary["latest"]
     maximum = max(summary["minutes5"])
-    return (round(latest, 1), round(maximum, 1))
+    return timestamp, round(latest, 1), round(maximum, 1)
 
 
 # Get data from database
 def getData():
-    for i in [0, 1, 2]:
+    global timestamp
+    if verbose:
+        print("Νέα δεδομένα:")
+    for i in range(len(phases)):
+        if verbose:
+            print("{0:s}".format(phases[i]["systemName"].encode('utf-8')))
         if not exitapp:
-            data = updateData(phases[i])
-            current[i] = data[0] / 1000
-            power[i] = data[0] * 230 / 1000
-            max_power[i] = data[1] * 230 / 1000
+            timestamp, latest, maximum = updateData(api, phases[i])
+            current[i] = latest/1000
+            power[i] = latest*230/1000
+            max_power[i] = maximum*230/1000
+            if verbose:
+                print("\tΙσχύς: {0:.1f} {1:.1f}".format(power[i], max_power[i]))
 
 
-def threaded_function(sleep):
+def threadedFunction(sleep):
+    global data_updated
     i = sleep*10
     while not exitapp:
         if i == 0:
             getData()
+            data_updated = True
             i = sleep*10
         time.sleep(0.1)
         i -= 1
 
 
-def mapValueToLeds(value, max, leds_available):
-    step = max / leds_available
-    # num_leds = math.ceil(value/step)
-    num_leds = round(value/step)
-    return int(num_leds)
-
-
 def setup():
-    global sparkworks, phases, thread
+    global api, phases, thread
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}"
-          .format(properties.username))
-    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
-    sparkworks.connect(properties.username, properties.password)
-    group = sparkworks.group(properties.uuid)
-    print("\t{0:s}\n"
-          .format(group["name"].encode("utf-8")))
-    print("Επιλεγμένοι αισθητήρες:")
-    phases = sparkworks.current_phases(properties.uuid)
-    for phase in phases:
-        print("\t{0:s}"
-              .format(phase["systemName"]))
-    print("\n")
+    api, phases = initData()
 
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     grovelcd.setRGB(50, 50, 50)
-    grovelcd.setText(gaia_text.loading_data)
+    grovelcd.setText(gaiapi.loading_data)
     getData()
-    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
-          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
+    gaiapi.printLastUpdate(timestamp)
 
-    thread = Thread(target=threaded_function, args=(10,))
+    thread = Thread(target=threadedFunction, args=(10,))
     thread.start()
 
 
@@ -108,16 +120,19 @@ def loop():
     print("Μέγιστη κατανάλωση στις προηγούμενες 4 ώρες: {0:.2f}"
           .format(basemax))
 
-    for i in [0, 1, 2]:
-        print("{0:s} Ρεύμα: {1:.2f}A, Κατανάλωση: {2:.2f}W"
-              .format(phases[i]['systemName'], current[i], power[i]))
-        open_leds[i] = mapValueToLeds(power[i], basemax, 12)
+    for i in range(len(phases)):
+        gaiapi.printRoom(current[i],
+                         "Φάση {0:d}".format(i+1),
+                         "Ρεύμα", "A")
+        gaiapi.printRoom(power[i],
+                         "Φάση {0:d}".format(i+1),
+                         "Κατανάλωση", "W")
+        open_leds[i] = gaiapi.mapToLeds(power[i], basemax, 12)
     arduino_gauge.write(*open_leds)
 
-    for i in [0, 1, 2]:
-        grovelcd.setRGB(R[i], G[i], B[i])
-        grovelcd.setText("Phase: {0:d}\n{1:>15.2f}W"
-                         .format(i+1, power[i]))
+    for i in range(len(phases)):
+        grovelcd.setRGB(*lcd_rgbs[i])
+        grovelcd.setText("Phase: {0:d}\n{1:>15.2f}W".format(i+1, power[i]))
         time.sleep(5)
 
 

@@ -9,19 +9,20 @@ sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
 import grove_rgb_lcd as grovelcd
-import gaia_text
+import gaiapi
 import properties
 from sparkworks import SparkWorks
 
 # Select pins for the leds and buttons
-pin1 = [2, 4, 6]
-pin2 = [3, 5, 7]
+led_pins = [[2, 3],
+            [4, 5],
+            [6, 7]]
 button = 8
 
 # Colors for the rooms
-R = [255, 255, 0]
-G = [0, 128, 255]
-B = [255, 0, 0]
+lcd_rgbs = [[255, 0, 255],
+            [255, 128, 0],
+            [0, 255, 0]]
 
 # Variables for the sensors
 rooms = None
@@ -31,156 +32,125 @@ timestamp = None
 
 # Other global variables
 thread = None
+data_updated = False
 exitapp = False
-sparkworks = None
+api = None
+verbose = False
+
+
+# Initialize connection to the database
+def initData():
+    print("Όνομα χρήστη:\n\t{0:s}".format(properties.username))
+    sw = SparkWorks(properties.client_id, properties.client_secret)
+    sw.connect(properties.username, properties.password)
+    group = sw.group(properties.uuid)
+    print("\t{0:s}\n".format(group["name"].encode("utf-8")))
+
+    print("Επιλεγμένες αίθουσες:")
+    rooms = sw.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}".format(room["name"].encode("utf-8")))
+    print("\n")
+    return sw, rooms
 
 
 # Update values from the database
-def updateSiteData(group, param):
-    global timestamp
-    resource = sparkworks.groupDeviceResource(group["uuid"], param["uuid"])
-    latest = sparkworks.latest(resource["uuid"])
+def updateData(sw, group, param):
+    resource = sw.groupDeviceResource(group["uuid"], sw.phenomenon(param)["uuid"])
+    latest = sw.latest(resource["uuid"])
     timestamp = latest["latestTime"]
     value = latest["latest"]
-    return round(value, 1)
+    return timestamp, round(value, 1)
 
 
 # Get data from database
 def getData():
-    for i in [0, 1, 2]:
+    global timestamp
+    if verbose:
+        print("Νέα δεδομένα:")
+    for i in range(len(rooms)):
+        if verbose:
+            print("{0:s}".format(rooms[i]["name"].encode('utf-8')))
         if not exitapp:
-            temperature[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Temperature"))
-            humidity[i] = updateSiteData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
+            timestamp, temperature[i] = updateData(api, rooms[i], "Temperature")
+            if verbose:
+                print("\tΘερμοκρασία: {0:.1f}".format(luminosity[i]))
+        if not exitapp:
+            timestamp, humidity[i] = updateData(api, rooms[i], "Relative Humidity")
+            if verbose:
+                print("\tΥγρασία: {0:.1f}".format(luminosity[i]))
 
 
-def threaded_function(sleep):
-    i = sleep * 10
+def threadedFunction(sleep):
+    global data_updated
+    i = sleep*10
     while not exitapp:
         if i == 0:
             getData()
+            data_updated = True
             i = sleep*10
         time.sleep(0.1)
         i -= 1
 
 
-# Sleep that breaks on click
-def breakSleep(interval):
-    i = 0
-    while (i < interval*10):
-        i += 1
-        try:
-            if (grovepi.digitalRead(button)):
-                time.sleep(.5)
-                break
-        except IOError:
-            print("Button Error")
-        time.sleep(.1)
-
-
-# Find out the maximum value
-def showMaximum(values):
-    max_value = max(values)
-    for i in [0, 1, 2]:
-        if values[i] == max_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
-    return max_value
-
-
-# Find out the minimum value
-def showMinimum(values):
-    min_value = min(values)
-    for i in [0, 1, 2]:
-        if values[i] == min_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
-    return min_value
-
-
-# Close all the leds
-def closeLeds():
-    for i in [0, 1, 2]:
-        grovepi.digitalWrite(pin1[i], 0)
-        grovepi.digitalWrite(pin2[i], 0)
-
-
 def setup():
-    global sparkworks, rooms, thread
+    global api, rooms, thread
     grovepi.pinMode(button, "INPUT")
-    for i in [0, 1, 2]:
-        grovepi.pinMode(pin1[i], "OUTPUT")
-        grovepi.pinMode(pin2[i], "OUTPUT")
-    closeLeds()
+    for pair in led_pins:
+        for pin in pair:
+            grovepi.pinMode(pin, "OUTPUT")
+    gaiapi.closeLeds(led_pins)
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
 
-    print("Όνομα χρήστη:\n\t{0:s}"
-          .format(properties.username))
-    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
-    sparkworks.connect(properties.username, properties.password)
-    group = sparkworks.group(properties.uuid)
-    print("\t{0:s}\n"
-          .format(group["name"].encode("utf-8")))
-    print("Επιλεγμένες αίθουσες:")
-    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
-    for room in rooms:
-        print("\t{0:s}"
-              .format(room["name"].encode("utf-8")))
-    print("\n")
+    api, rooms = initData()
 
     print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
     grovelcd.setRGB(50, 50, 50)
-    grovelcd.setText(gaia_text.loading_data)
+    grovelcd.setText(gaiapi.loading_data)
     getData()
-    print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
-          .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
+    gaiapi.printLastUpdate(timestamp)
 
-    thread = Thread(target=threaded_function, args=(10,))
+    thread = Thread(target=threadedFunction, args=(10,))
     thread.start()
 
 
 def loop():
     # minimum temperature
-    minimum = showMinimum(temperature)
-    print("Ελάχιστη θερμοκρασία [μοβ,πορτοκαλί,πράσινο]")
-    print("{0:^20.1f} {1:s}"
-          .format(minimum, str(temperature)))
-    new_text = "Min {0:s}\n{1:>14.1f}oC".format("Temperature", minimum)
+    val, idx = gaiapi.showMinimum(led_pins, temperature[:len(rooms)])
+    gaiapi.printRoomsMinMax(temperature, val,
+                            "Θερμοκρασία", "Ελάχιστη")
+    new_text = "Min {0:s}\n{1:>14.1f}oC".format("Temperature", val)
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
-    breakSleep(5)
+    gaiapi.breakSleep(button, 5)
 
-    for i in [0, 1, 2]:
-        print("Θερμοκρασία: {0:s}: {1:5.1f} oC"
-              .format(properties.the_rooms[i], temperature[i]))
+    for i in range(len(rooms)):
+        gaiapi.printRoom(temperature[i],
+                         properties.the_rooms[i],
+                         "Θερμοκρασία", "oC")
         new_text = "{0:s}\n{1:>14.1f}oC".format("Temperature", temperature[i])
-        grovelcd.setRGB(R[i], G[i], B[i])
+        grovelcd.setRGB(*lcd_rgbs[i])
         grovelcd.setText(new_text)
-        breakSleep(5)
+        gaiapi.breakSleep(button, 5)
 
     # maximum humidity
-    maximum = showMaximum(humidity)
-    print("Μέγιστη υγρασία [μοβ,πορτοκαλί,πράσινο]")
-    print("{0:^15.1f} {1:s}"
-          .format(maximum, str(humidity)))
-    new_text = "Max {0:s}\n{1:>13s}%RH".format("Humidity", str(maximum))
+    val, idx = gaiapi.showMaximum(led_pins, humidity[:len(rooms)])
+    gaiapi.printRoomsMinMax(humidity, val,
+                            "Υγρασία", "Μέγιστη")
+    new_text = "Max {0:s}\n{1:>13.1f}%RH".format("Humidity", val)
     grovelcd.setRGB(60, 60, 60)
     grovelcd.setText(new_text)
-    breakSleep(5)
+    gaiapi.breakSleep(button, 5)
 
-    for i in [0, 1, 2]:
-        print("Υγρασία: {0:s}: {1:5.1f} %RH"
-              .format(properties.the_rooms[i], humidity[i]))
+    for i in range(len(rooms)):
+        gaiapi.printRoom(humidity[i],
+                         properties.the_rooms[i],
+                         "Υγρασία", "%RH")
         new_text = "{0:s}\n{1:>13.1f}%RH".format("Humidity", humidity[i])
-        grovelcd.setRGB(R[i], G[i], B[i])
+        grovelcd.setRGB(*lcd_rgbs[i])
         grovelcd.setText(new_text)
-        breakSleep(5)
+        gaiapi.breakSleep(button, 5)
 
 
 def main():

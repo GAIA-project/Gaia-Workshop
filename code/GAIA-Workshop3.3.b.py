@@ -9,26 +9,26 @@ sys.path.append(os.getcwd())
 sys.dont_write_bytecode = True
 import grovepi
 import grove_rgb_lcd as grovelcd
-import gaia_text
+import gaiapi
 import properties
 from sparkworks import SparkWorks
 import arduino_gauge_i2c as arduino_gauge
 
 # Select pins for the leds and buttons
-pin1 = [2, 4]
-pin2 = [3, 5]
+led_pins = [[2, 3],
+            [4, 5]]
 button = 8
 button2 = 7
 
 # Colors for the rooms
-R = [255, 255, 0]
-G = [0, 128, 255]
-B = [255, 0, 0]
+lcd_rgbs = [[255, 0, 255],
+            [255, 128, 0],
+            [0, 255, 0]]
 
 # Variables for the sensors
 rooms = None
-temperature = [0, 0]
-humidity = [0, 0]
+temperature = [0, 0, 0]
+humidity = [0, 0, 0]
 timestamp = None
 
 # Other global variables
@@ -37,60 +37,53 @@ time_idx_changed = False
 room_idx = 0
 room_idx_changed = False
 thread = None
+data_updated = False
 exitapp = False
-sparkworks = None
+api = None
+verbose = False
+
+
+# Initialize connection to the database
+def initData():
+    print("Όνομα χρήστη:\n\t{0:s}".format(properties.username))
+    sw = SparkWorks(properties.client_id, properties.client_secret)
+    sw.connect(properties.username, properties.password)
+    group = sw.group(properties.uuid)
+    print("\t{0:s}\n".format(group["name"].encode("utf-8")))
+
+    print("Επιλεγμένες αίθουσες:")
+    rooms = sw.select_rooms(properties.uuid, properties.the_rooms)
+    for room in rooms:
+        print("\t{0:s}".format(room["name"].encode("utf-8")))
+    print("\n")
+    return sw, rooms
 
 
 # Update values from the database
-def updateData(group, param):
-    global timestamp
-    resource = sparkworks.groupAggResource(group["uuid"], param["uuid"])
-    summary = sparkworks.summary(resource["uuid"])
+def updateData(sw, group, param):
+    resource = sw.groupAggResource(group["uuid"], sw.phenomenon(param)["uuid"])
+    summary = sw.summary(resource["uuid"])
     timestamp = summary["latestTime"]
     values = summary["minutes60"]
-    return values
+    return timestamp, [round(value, 1) for value in values]
 
 
 # Get data from database
-def getSensorData():
-    for i in [0, 1]:
+def getData():
+    global timestamp
+    if verbose:
+        print("Νέα δεδομένα:")
+    for i in range(len(led_pins)):
+        if verbose:
+            print("{0:s}".format(rooms[i]["name"].encode('utf-8')))
         if not exitapp:
-            temperature[i] = updateData(rooms[i], sparkworks.phenomenon("Temperature"))
-            humidity[i] = updateData(rooms[i], sparkworks.phenomenon("Relative Humidity"))
-
-
-def checkButton(button, idx, init, limit, step=1):
-    idx_changed = False
-    try:
-        if (grovepi.digitalRead(button)):
-            idx += step
-            if idx >= limit:
-                idx = init
-            idx_changed = True
-            time.sleep(.5)
-    except IOError:
-        print("Button Error")
-    return idx, idx_changed
-
-
-# Find out the minimum value
-def showMinimum(values):
-    min_value = min(values)
-    for i in [0, 1]:
-        if values[i] == min_value:
-            grovepi.digitalWrite(pin1[i], 0)
-            grovepi.digitalWrite(pin2[i], 1)
-        else:
-            grovepi.digitalWrite(pin1[i], 1)
-            grovepi.digitalWrite(pin2[i], 0)
-    return min_value
-
-
-# Close all the leds
-def closeLeds():
-    for i in [0, 1]:
-        grovepi.digitalWrite(pin1[i], 0)
-        grovepi.digitalWrite(pin2[i], 0)
+            timestamp, temperature[i] = updateData(api, rooms[i], "Temperature")
+            if verbose:
+                print("\tΘερμοκρασία: {0:.1f}".format(temperature[i]))
+        if not exitapp:
+            timestamp, humidity[i] = updateData(api, rooms[i], "Relative Humidity")
+            if verbose:
+                print("\tΥγρασία: {0:.1f}".format(humidity[i]))
 
 
 def calcDi(t, rh):
@@ -126,31 +119,19 @@ def mapDiToLeds(di):
 
 
 def setup():
-    global sparkworks, rooms
+    global api, rooms
     grovepi.pinMode(button, "INPUT")
     grovepi.pinMode(button2, "INPUT")
-    for i in [0, 1]:
-        grovepi.pinMode(pin1[i], "OUTPUT")
-        grovepi.pinMode(pin2[i], "OUTPUT")
-    closeLeds()
+    for pair in led_pins:
+        for pin in pair:
+            grovepi.pinMode(pin, "OUTPUT")
+    gaiapi.closeLeds(led_pins)
     grovelcd.setRGB(0, 0, 0)
     grovelcd.setText("")
     arduino_gauge.connect()
     arduino_gauge.write(1, 1, 1)
 
-    print("Όνομα χρήστη:\n\t{0:s}"
-          .format(properties.username))
-    sparkworks = SparkWorks(properties.client_id, properties.client_secret)
-    sparkworks.connect(properties.username, properties.password)
-    group = sparkworks.group(properties.uuid)
-    print("\t{0:s}\n"
-          .format(group["name"].encode("utf-8")))
-    print("Επιλεγμένες αίθουσες:")
-    rooms = sparkworks.select_rooms(properties.uuid, properties.the_rooms)
-    for room in rooms:
-        print("\t{0:s}"
-              .format(room["name"].encode("utf-8")))
-    print("\n")
+    api, rooms = initData()
 
 
 def loop():
@@ -158,10 +139,9 @@ def loop():
     if time_idx is None:
         print("Συλλογή δεδομένων, παρακαλώ περιμένετε...")
         grovelcd.setRGB(50, 50, 50)
-        grovelcd.setText(gaia_text.loading_data)
-        getSensorData()
-        print("Τελευταία ανανέωση δεδομένων: {0:s}\n"
-              .format(datetime.datetime.fromtimestamp((timestamp/1000.0)).strftime('%Y-%m-%d %H:%M:%S')))
+        grovelcd.setText(gaiapi.loading_data)
+        getData()
+        gaiapi.printLastUpdate(timestamp)
         time_idx = 0
         time_idx_changed = True
 
@@ -175,38 +155,40 @@ def loop():
         strtime = timevalue.strftime('%H:%M')
 
         # Calculate DI
-        di_vals = [0, 0]
-        di_leds = [None, None]
-        di_word = [None, None]
-        for i in [0, 1]:
-            di_vals[i] = calcDi(temperature[i][time_idx], humidity[i][time_idx])
-            di_leds[i], di_word[i] = mapDiToLeds(di_vals[i])
-        arduino_gauge.write(di_leds[0], di_leds[1], 0)
+        di = [{"val": 0, "led": 0, "wrd": ""},
+              {"val": 0, "led": 0, "wrd": ""},
+              {"val": 0, "led": 0, "wrd": ""}]
+        for i in range(len(led_pins)):
+            di[i]["val"] = calcDi(temperature[i][time_idx], humidity[i][time_idx])
+            di[i]["led"], di[i]["wrd"] = mapDiToLeds(di[i]["val"])
+        arduino_gauge.write(*[d["led"] for d in di])
 
         # Print to terminal
-        print(" Ημερομηνία: {0:s}"
-              .format(strdate))
-        print("Θερμοκρασία: {0:s}: {1:5.1f}"
-              .format(properties.the_rooms[room_idx], temperature[room_idx][time_idx]))
-        print("    Υγρασία: {0:s}: {1:5.1f}"
-              .format(properties.the_rooms[room_idx], humidity[room_idx][time_idx]))
-        print("         DI: {0:s}: {1:5.1f} {2:s}"
-              .format(properties.the_rooms[room_idx], di_vals[room_idx], di_word[room_idx]))
+        gaiapi.printDate(strdate)
+        gaiapi.printRoom(temperature[room_idx][time_idx],
+                         properties.the_rooms[room_idx],
+                         "Θερμοκρασία", "oC")
+        gaiapi.printRoom(humidity[room_idx][time_idx],
+                         properties.the_rooms[room_idx],
+                         "    Υγρασία", "%RH")
+        gaiapi.printRoom(di[room_idx]["val"],
+                         properties.the_rooms[room_idx],
+                         "         DI", di[room_idx]["wrd"])
 
         # Print to LCD
-        str_di = "DI:{0:.1f}".format(di_vals[room_idx]).rjust(16 - len(strtime))
-        str_desc = di_word[room_idx].rjust(16)
+        str_di = "DI:{0:.1f}".format(di[room_idx]["val"]).rjust(16 - len(strtime))
+        str_desc = di[room_idx]["wrd"].rjust(16)
         new_text = strtime + str_di + str_desc
-        grovelcd.setRGB(R[room_idx], G[room_idx], B[room_idx])
+        grovelcd.setRGB(*lcd_rgbs[room_idx])
         grovelcd.setText(new_text)
 
         # Show with red the classroom with minimum DI
-        showMinimum(di_vals)
+        val, idx = gaiapi.showMinimum(led_pins, [d["val"] for d in di[:len(led_pins)]])
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
     # Detect button presses
-    time_idx, time_idx_changed = checkButton(button, time_idx, None, 48)
-    room_idx, room_idx_changed = checkButton(button2, room_idx, 0, 2)
+    time_idx, time_idx_changed = gaiapi.checkButton(button, time_idx, None, 23)
+    room_idx, room_idx_changed = gaiapi.checkButton(button2, room_idx, 0, len(led_pins)-1)
 
 
 def main():

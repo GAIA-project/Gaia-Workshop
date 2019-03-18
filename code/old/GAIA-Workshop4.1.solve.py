@@ -40,7 +40,7 @@ def updateData(resource):
     timestamp = summary["latestTime"]
     latest = summary["latest"]
     maximum = max(summary["minutes5"])
-    return (round(latest, 1), round(maximum, 1))
+    return round(latest, 1), round(maximum, 1)
 
 
 # Get data from database

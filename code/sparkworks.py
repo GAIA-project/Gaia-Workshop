@@ -166,9 +166,10 @@ class SparkWorks:
         _resources = self.groupResources(group_uuid)
         _groupResources = []
         for _resource in _resources:
-            _is_lora = _resource[self.SYSTEM_NAME_CONST].startswith(self.DEV_CONST_LORA)
+            _is_rpi = _resource[self.SYSTEM_NAME_CONST].startswith(self.GAIA_CONST)
             _is_xbee = _resource[self.SYSTEM_NAME_CONST].startswith(self.DEV_CONST_XBEE)
-            if _is_lora or _is_xbee:
+            _is_lora = _resource[self.SYSTEM_NAME_CONST].startswith(self.DEV_CONST_LORA)
+            if _is_rpi or _is_xbee or _is_lora:
                 _groupResources.append(_resource)
         return _groupResources
 
