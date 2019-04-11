@@ -49,9 +49,11 @@ def initData():
     group = sw.group(properties.uuid)
     print("\t{0:s}\n".format(group["name"].encode("utf-8")))
 
-    room, phases = sw.select_power_meters(properties.uuid, properties.lab_room)
+    room, phases = sw.select_power_meter(properties.uuid, properties.lab_room)
     print("Επιλεγμένη αίθουσα:")
     print("\t{0:s}".format(room["name"].encode("utf-8")))
+    if not phases:
+        sys.exit("Δεν βρέθηκαν αισθητήρες ρεύματος για την επιλεγμένη αίθουσα")
     print("Επιλεγμένοι αισθητήρες:")
     for phase in phases:
         print("\t{0:s}".format(phase["systemName"]))

@@ -254,13 +254,18 @@ class SparkWorks:
             if _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
                 return _resource
 
-    def select_power_meters(self, group_uuid, room_name):
+    def select_power_meter(self, group_uuid, room_name):
         _phases = []
         _groups = self.subGroups(group_uuid, self.SELECTION_DEPTH_MAX)
+        _groups.append(self.group(group_uuid))
         _room = self.select_room(group_uuid, room_name)
         _group = _room
         while not _phases:
             _phases = self.current_phases(_group['uuid'])
+            if _group['uuid'] == group_uuid:
+                if len(_phases) > 3:
+                    _phases = []
+                break
             for _g in _groups:
                 if _group['parentPath'] == _g['path']:
                     _group = _g
