@@ -73,6 +73,21 @@ class SparkWorks:
         response = self.apiGetAuthorized('/v2/group/' + group_uuid + '/subgroup/' + str(depth))
         return response.json()
 
+    def select_room(self, group_uuid, room_name, max_depth=SELECTION_DEPTH_MAX):
+        _room = None
+        _depth = self.SELECTION_DEPTH
+        room_name = room_name.decode('utf-8').strip()
+        while _room is None:
+            _subgroups = self.subGroups(group_uuid, _depth)
+            _depth += 1
+            for _subgroup in _subgroups:
+                # Strip group name and replace it for match and sort to work on malformed group names
+                _subgroup[self.NAME_CONST] = _subgroup[self.NAME_CONST].strip()
+                _is_match = _subgroup[self.NAME_CONST] == room_name
+                if _is_match:
+                    _room = _subgroup
+        return _room
+
     def select_rooms(self, group_uuid, room_names, max_depth=SELECTION_DEPTH_MAX, sort=True):
         _rooms = []
         _depth = self.SELECTION_DEPTH
@@ -238,6 +253,19 @@ class SparkWorks:
         for _resource in _resources:
             if _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
                 return _resource
+
+    def select_power_meters(self, group_uuid, room_name):
+        _phases = []
+        _groups = self.subGroups(group_uuid, self.SELECTION_DEPTH_MAX)
+        _room = self.select_room(group_uuid, room_name)
+        _group = _room
+        while not _phases:
+            _phases = self.current_phases(_group['uuid'])
+            for _g in _groups:
+                if _group['parentPath'] == _g['path']:
+                    _group = _g
+                    break
+        return _room, _phases
 
     def latest(self, resource_uuid):
         response = self.apiGetAuthorized('/v2/resource/' + resource_uuid + '/latest')

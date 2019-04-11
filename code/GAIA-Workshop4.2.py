@@ -27,9 +27,9 @@ lcd_rgbs = [[255, 0, 255],
 
 # Variables for the sensors
 phases = None
-current = [0, 0, 0]
-power = [0, 0, 0]
-max_power = [0, 0, 0]
+current = [None, None, None]
+power = [None, None, None]
+max_power = [None, None, None]
 timestamp = None
 
 # Other global variables
@@ -52,8 +52,10 @@ def initData():
     group = sw.group(properties.uuid)
     print("\t{0:s}\n".format(group["name"].encode("utf-8")))
 
+    room, phases = sw.select_power_meters(properties.uuid, properties.lab_room)
+    print("Επιλεγμένη αίθουσα:")
+    print("\t{0:s}".format(room["name"].encode("utf-8")))
     print("Επιλεγμένοι αισθητήρες:")
-    phases = sw.current_phases(properties.uuid)
     for phase in phases:
         print("\t{0:s}".format(phase["systemName"]))
     print("\n")
@@ -135,7 +137,7 @@ def loop():
 
         # Print to LCD
         if phase_idx == -1:
-            total = sum(p[time_idx] for p in power)
+            total = sum(p[time_idx] for p in power if p is not None)
             new_text = "{0:s}\n{1:>15.1f}W".format(strtime, total)
             grovelcd.setRGB(50, 50, 50)
         else:
