@@ -15,6 +15,7 @@ class SparkWorks:
     DEV_CONST_LORA = "dragino-"
     SELECTION_DEPTH = 1
     SELECTION_DEPTH_MAX = 10
+    SELECTION_PHASES = 3
 
     __api_url = "https://api.sparkworks.net"
     __sso_url = "https://sso.sparkworks.net/aa/oauth/token"
@@ -254,7 +255,7 @@ class SparkWorks:
             if _resource[self.SYSTEM_NAME_CONST].startswith(self.SITE_PREFIX_CONST):
                 return _resource
 
-    def select_power_meter(self, group_uuid, room_name):
+    def select_power_meter(self, group_uuid, room_name, phases_max=SELECTION_PHASES):
         _phases = []
         _groups = self.subGroups(group_uuid, self.SELECTION_DEPTH_MAX)
         _groups.append(self.group(group_uuid))
@@ -263,7 +264,7 @@ class SparkWorks:
         while not _phases:
             _phases = self.current_phases(_group['uuid'])
             if _group['uuid'] == group_uuid:
-                if len(_phases) > 3:
+                if len(_phases) > phases_max:
                     _phases = []
                 break
             for _g in _groups:
@@ -278,6 +279,18 @@ class SparkWorks:
 
     def summary(self, resource_uuid):
         response = self.apiGetAuthorized('/v2/resource/' + resource_uuid + '/summary')
+        return response.json()
+
+    def timerange(self, resource_uuid, start_date, end_date, granularity="5min"):
+        _queries = {"queries": []}
+        for uuid in resource_uuid:
+            _query = {"from": start_date.timestamp()*1000,
+                      "to": end_date.timestamp()*1000,
+                      "resourceUuid": resource_uuid,
+                      "resultLimit": None,
+                      "granularity": granularity}
+            _queries["queries"].append(_query)
+        response = self.apiPostAuthorized('/v2/resource/query/timerange', _queries)
         return response.json()
 
     def resourceBySystemName(self, system_name):
