@@ -8,15 +8,14 @@ sys.path.append(os.getcwd())
 from threading import Thread
 import time
 
-import gaia_text
+import gaiapi
 import properties
 import sparkworks
 
-from grove_rgb_lcd import *
 import math
 import grovepi
-from grove_rgb_lcd import *
-import arduinoGauge
+import grove_rgb_lcd as grovelcd
+import arduino_gauge_i2c as arguino_gauge
 
 exitapp = False
 power = 0

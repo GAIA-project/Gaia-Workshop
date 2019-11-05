@@ -8,11 +8,11 @@ import properties
 import sparkworks
 import grovepi
 import math
-import arduinoGauge
+import arduino_gauge_i2c as arduino_gauge
 import datetime
 from threading import Thread
-import gaia_text
-from grove_rgb_lcd import *
+import gaiapi
+import grove_rgb_lcd as grovelcd
 
 exitapp = False
 button = 8
