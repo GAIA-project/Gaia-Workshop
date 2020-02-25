@@ -131,7 +131,7 @@ def loop():
     # Τέλος διαδικασίας εμφάνισης αποτελεσμάτων
 
     # Detect button presses
-    time_idx, time_idx_changed = gaiapi.checkButton(button, time_idx, None, 23)
+    time_idx, time_idx_changed = gaiapi.checkButton(button, time_idx, None, 47)
     room_idx, room_idx_changed = gaiapi.checkButton(button2, room_idx, 0, len(led_pins)-1)
 
 

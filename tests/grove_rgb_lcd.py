@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import tkinter as tk
+import Tkinter as tk
 from binascii import hexlify
 
 grove_rgb_lcd = tk.Tk()

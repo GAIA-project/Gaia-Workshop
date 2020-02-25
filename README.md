@@ -133,12 +133,13 @@ If you want to use a different data provider you can redefine ``initData()``
 and ``update[Site]Data()``. The only requirement is to have them return your data
 in a form the rest of the exercise can utilize.
 
-* In the case of ``initData()``, the only requirement is to return the classrooms
-or the phases being monitored as the second product.
+* In the case of ``initData()``, the only requirement is to return the classrooms's
+or phases's names being monitored as the second product.
 
 * In the case of ``update[Site]Data()``, the returned products are always a
 timestamp in unix time and a list of 48 measurement. In some cases more products
-are returned, such as the maximum and minimun values.
+are returned, such as the maximum and minimun values. Refer to each exercises's
+code for more information
 
 
 ## Authors

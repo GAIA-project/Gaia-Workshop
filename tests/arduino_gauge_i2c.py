@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import time
-import tkinter as tk
+import Tkinter as tk
 
 num_rings = 3
 num_leds = 12
